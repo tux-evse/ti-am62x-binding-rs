@@ -1,0 +1,19 @@
+ti-am62x-binding
+================
+Provides:
+* Rust binding to Pionix [ti-am62x-evse-sdk](https://github.com/PionixPublic/ti-am62x-evse-sdk)
+* afb-binding micro service architecture and security model [api-v4](https://docs.redpesk.bzh/docs/en/master/developer-guides/afb-binding-overview.html)
+
+Dependencies:
+* C/lib ti_rpmsg_char: git://git.ti.com/rpmsg/ti-rpmsg-char.git
+* C compiler for build.rs code generation
+* protobuf-compiler: dnf install protobuf-compiler (for OpenSuse check [1])
+
+Warning: work under heavy development
+* expect libafb to be installed in $Project/../Rust with (Fulup-Dev) branch
+
+[1] OpenSuSE note:
+SuSE uses a custom name for protobuf package and binary, and because of protoc execution model a symbolic link cannot do the job
+ * zipper install protobuf-c
+ * in your environment add ```export  PROTOC=/usr/bin/protoc-c```  (warning: a link cannot do the job)
+

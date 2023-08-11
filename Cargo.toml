@@ -1,0 +1,25 @@
+[package]
+name = "demo-prost"
+version = "0.0.1"
+edition = "2021"
+authors = ["Fulup Le Foll <fulup@iot.bzh>"]
+publish = false
+build = "src/build.rs"
+
+[dependencies]
+prost = "0.11"
+serde = { version = "1.0", features = ["derive"] }
+serde_json={ version= "1.0"}
+lib_libafb= {path= "../../Rust/afb-librust/libafb"}
+
+[build-dependencies]
+prost-build = { version = "0.11" }
+bindgen    = ">=0.6"
+cc = "1"
+
+[lib]
+name = "ti_am62x"
+crate-type = ["lib"]
+path = "src/ti-am62x-libso.rs"
+
+
