@@ -7,13 +7,13 @@ publish = false
 build = "src/build.rs"
 
 [dependencies]
-prost = "0.11"
+prost = "0.12.1"
 serde = { version = "1.0", features = ["derive"] }
 serde_json={ version= "1.0"}
-lib_libafb= {path= "../../Rust/afb-librust/libafb"}
+#lib_libafb= {path= "../../Rust/afb-librust/libafb"}
 
 [build-dependencies]
-prost-build = { version = "0.11" }
+prost-build = { version = "0.12.1" }
 bindgen    = ">=0.6"
 cc = "1"
 
