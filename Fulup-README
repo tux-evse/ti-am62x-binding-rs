@@ -2,7 +2,7 @@ ti-am62x-binding
 ================
 Provides:
 * Rust binding to Pionix [ti-am62x-evse-sdk](https://github.com/PionixPublic/ti-am62x-evse-sdk)
-* afb-binding micro service architecture and security model [api-v4](https://docs.redpesk.bzh/docs/en/master/developer-guides/afb-binding-overview.html)
+* afb-binding micro service architecture and security model [api-v4](https://github.com/redpesk-common/afb-librust/blob/master/docs/1-architecture_presentation.md)
 
 Dependencies:
 * C/lib ti_rpmsg_char: git://git.ti.com/rpmsg/ti-rpmsg-char.git

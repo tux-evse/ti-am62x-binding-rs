@@ -48,33 +48,32 @@ fn timer_callback(timer: &AfbTimer, _decount: u32, ctx: &mut DevTimerCtx) {
 
 // on event ctx and callback
 struct DevAsyncCtx {
-    apiv4: AfbApiV4,
     count: Cell<u32>,
     dev: Arc<TiRpmsg>,
     evt: &'static AfbEvent,
 }
 AfbEvtFdRegister!(DecAsyncCtrl, async_dev_cb, DevAsyncCtx);
-fn async_dev_cb(_evtfd: &AfbEvtFd, revent: u32, ctx: &mut DevAsyncCtx) {
+fn async_dev_cb(_fd: &AfbEvtFd, revent: u32, ctx: &mut DevAsyncCtx) {
     if revent == AfbEvtFdPoll::IN.bits() {
         let mut buffer: Vec<u8> = Vec::with_capacity(PROTOBUF_MAX_CAPACITY);
         match ctx.dev.read(&mut buffer) {
             Ok(value) => value,
             Err(error) => {
-                afb_log_msg!(Critical, ctx.apiv4, "{}", error);
+                afb_log_msg!(Critical, None, "{}", error);
                 return;
             }
-        }
+        }//
 
         match msg_uncode(&buffer) {
             EventMsg::Err(error) => {
-                afb_log_msg!(Critical, ctx.apiv4, "{}", error);
+                afb_log_msg!(Critical, None, "{}", error);
             }
 
             EventMsg::Heartbeat() => {
                 let count = ctx.count.get() + 1;
                 ctx.count.set(count);
 
-                afb_log_msg!(Debug, ctx.apiv4, "Device heartbeat count={}", count);
+                afb_log_msg!(Debug, None, "Device heartbeat count={}", count);
             }
 
             EventMsg::Msg(iso6185) => {
@@ -200,7 +199,6 @@ pub(crate) fn register(api: &mut AfbApi, config: &ApiUserData) -> Result<(), Afb
         .set_fd(handle.get_fd())
         .set_events(AfbEvtFdPoll::IN)
         .set_callback(Box::new(DevAsyncCtx {
-            apiv4: api.get_apiv4(),
             dev: handle.clone(),
             evt: event,
             count: Cell::new(0),
