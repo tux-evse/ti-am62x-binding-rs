@@ -30,7 +30,7 @@ mod cglue {
     include!("./_ti-rpmsg-map.rs");
 }
 
-use libafb::prelude::AfbError;
+use afbv4::prelude::AfbError;
 //use std::ffi::CStr;
 use std::ffi::CString;
 

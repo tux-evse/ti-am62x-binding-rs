@@ -20,7 +20,7 @@
  */
 
 use crate::prelude::*;
-use libafb::prelude::*;
+use afbv4::prelude::*;
 
 pub(crate) struct ApiUserData {
     pub uid: &'static str,

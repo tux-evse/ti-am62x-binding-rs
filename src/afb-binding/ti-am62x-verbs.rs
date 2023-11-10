@@ -22,7 +22,7 @@ use std::cell::Cell;
 use std::sync::Arc;
 
 use crate::prelude::*;
-use libafb::prelude::*;
+use afbv4::prelude::*;
 
 // protobuf maximum buffer size
 const PROTOBUF_MAX_CAPACITY: usize = 256;

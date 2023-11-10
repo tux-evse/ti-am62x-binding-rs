@@ -19,7 +19,7 @@
  *  interfacing through kernel RPMSG the firmware running in the MCU/M4 cortex.
  */
 
-use libafb::prelude::*;
+use afbv4::prelude::*;
 use prost::Message;
 
 mod pbuf {
