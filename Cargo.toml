@@ -1,25 +1,10 @@
-[package]
-name = "demo-prost"
-version = "0.0.1"
-edition = "2021"
-authors = ["Fulup Le Foll <fulup@iot.bzh>"]
-publish = false
-build = "src/build.rs"
+[workspace]
+resolver = "2"
 
-[dependencies]
-prost = "0.12.1"
-serde = { version = "1.0", features = ["derive"] }
-serde_json={ version= "1.0"}
-#afbv4 = {git= "https://github.com/redpesk-common/afb-librust", branch="master", optional = true}
+members = [
+    "ti-rpmsg",
+    "afb-binding",
+]
 
-[build-dependencies]
-prost-build = { version = "0.12.1" }
-bindgen    = ">=0.6"
-cc = "1"
-
-[lib]
-name = "ti_am62x"
-crate-type = ["lib"]
-path = "src/ti-am62x-libso.rs"
 
 

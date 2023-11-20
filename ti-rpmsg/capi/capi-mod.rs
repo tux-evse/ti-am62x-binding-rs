@@ -27,7 +27,7 @@
 #![allow(non_snake_case)]
 
 mod cglue {
-    include!("./_ti-rpmsg-map.rs");
+    include!("./_capi-map.rs");
 }
 
 use afbv4::prelude::AfbError;

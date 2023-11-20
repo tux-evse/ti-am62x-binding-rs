@@ -1,0 +1,25 @@
+[package]
+name = "rpmsg"
+version = "0.0.1"
+edition = "2021"
+authors = ["Fulup Le Foll <fulup@iot.bzh>"]
+publish = false
+build = "capi/build.rs"
+
+[dependencies]
+afbv4 = {git= "https://github.com/redpesk-common/afb-librust", branch="master", optional = true}
+prost = "0.12.1"
+serde = { version = "1.0", features = ["derive"] }
+serde_json={ version= "1.0"}
+
+[build-dependencies]
+prost-build = { version = "0.12.1" }
+bindgen    = ">=0.69"
+cc = "1"
+
+[lib]
+name = "rpmsg"
+crate-type = ["lib"]
+path = "src/libso.rs"
+
+

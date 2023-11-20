@@ -21,14 +21,12 @@
 use std::cell::Cell;
 use std::sync::Arc;
 
+use rpmsg::prelude::*;
 use crate::prelude::*;
 use afbv4::prelude::*;
 
 // protobuf maximum buffer size
 const PROTOBUF_MAX_CAPACITY: usize = 256;
-
-// import serde/json converters
-AfbDataConverter!(pwm_state_type, PwmState);
 
 // timer ctx and callback
 struct DevTimerCtx {
@@ -53,7 +51,7 @@ struct DevAsyncCtx {
     evt: &'static AfbEvent,
 }
 AfbEvtFdRegister!(DecAsyncCtrl, async_dev_cb, DevAsyncCtx);
-fn async_dev_cb(_fd: &AfbEvtFd, revent: u32, ctx: &mut DevAsyncCtx) {
+fn async_dev_cb(_event: &AfbEvtFd, revent: u32, ctx: &mut DevAsyncCtx) {
     if revent == AfbEvtFdPoll::IN.bits() {
         let mut buffer: Vec<u8> = Vec::with_capacity(PROTOBUF_MAX_CAPACITY);
         match ctx.dev.read(&mut buffer) {
@@ -185,14 +183,16 @@ fn setpwm_callback(
 }
 
 pub(crate) fn register(api: &mut AfbApi, config: &ApiUserData) -> Result<(), AfbError> {
+
+    // register custom afb-v4 type converter
+    rpmsg_register() ?;
+
+
     let ti_dev = TiRpmsg::new(config.devname, config.eptnum, config.eptname)?;
     let handle = Arc::new(ti_dev);
 
     // create event and store it within callback context
     let event = AfbEvent::new(config.uid);
-
-    // register imported serde type
-    pwm_state_type::register()?;
 
     // register dev handler within listening event loop
     AfbEvtFd::new(config.uid)

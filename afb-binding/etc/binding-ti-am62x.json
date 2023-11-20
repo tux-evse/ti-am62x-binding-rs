@@ -1,0 +1,17 @@
+{
+  "name": "afb-ti-am62x",
+  "no-ldpaths": true,
+  "port": 1234,
+  "alias": ["/devtools:/usr/share/afb-ui-devtools/binder"],
+  "monitoring": true,
+  "tracereq":"all",
+
+  "binding": [
+    {
+        "uid": "ti-am62x",
+        "api": "tiam62x",
+        "path": "${CARGO_TARGET_DIR}debug/libafb_tiam62x.so",
+        "info": "Ti MCU(am62x) firmware rpmsg/openamp API",
+    }
+  ]
+}

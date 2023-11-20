@@ -10,7 +10,7 @@ Dependencies:
 * protobuf-compiler: dnf install protobuf-compiler (for OpenSuse check [1])
 
 Warning: work under heavy development
-* expect libafb to be installed in $Project/../Rust with (Fulup-Dev) branch
+* expect afbv4 to be installed in $Project/../Rust with (Fulup-Dev) branch
 
 [1] OpenSuSE note:
 SuSE uses a custom name for protobuf package and binary, and because of protoc execution model a symbolic link cannot do the job

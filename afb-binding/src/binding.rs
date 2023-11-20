@@ -21,6 +21,7 @@
 
 use crate::prelude::*;
 use afbv4::prelude::*;
+use rpmsg::prelude::*;
 
 pub(crate) struct ApiUserData {
     pub uid: &'static str,
@@ -114,7 +115,7 @@ pub fn binding_init(rootv4: AfbApiV4, jconf: JsoncObj) -> Result<&'static AfbApi
         tic,
     };
 
-    // initialisation of ti rpm_char_lib should be done once at initialization
+    // initialization of ti rpm_char_lib should be done once at initialization
     ti_init(socname)?;
 
     // register data converter
