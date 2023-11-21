@@ -63,11 +63,11 @@ pub fn ti_exit() {
 }
 
 impl TiRpmsg {
-    pub fn new(devname: Option<&str>, eptnum: i32, eptname: &str) -> Result<TiRpmsg, AfbError> {
-        let devname = match devname {
+    pub fn new(cdev: Option<&str>, rport: i32, eptname: &str) -> Result<TiRpmsg, AfbError> {
+        let cdev = match cdev {
             None => 0 as *mut ::std::os::raw::c_char,
             Some(value) => {
-                let sname = CString::new(value).expect("Invalid devname string");
+                let sname = CString::new(value).expect("Invalid cdev string");
                 sname.into_raw()
             }
         };
@@ -77,9 +77,9 @@ impl TiRpmsg {
         let handle = unsafe {
             cglue::rpmsg_char_open(
                 cglue::rproc_id_M4F_MCU0_0,
-                devname,
+                cdev,
                 -1, /* any port */
-                eptnum,
+                rport,
                 eptname.into_raw(),
                 0,
             )

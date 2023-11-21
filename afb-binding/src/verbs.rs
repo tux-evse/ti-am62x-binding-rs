@@ -186,7 +186,7 @@ pub(crate) fn register(api: &mut AfbApi, config: &ApiUserData) -> Result<(), Afb
     // register custom afb-v4 type converter
     rpmsg_register()?;
 
-    let ti_dev = TiRpmsg::new(config.devname, config.eptnum, config.eptname)?;
+    let ti_dev = TiRpmsg::new(config.cdev, config.rport, config.eptname)?;
     let handle = Rc::new(ti_dev);
 
     // create event and store it within callback context

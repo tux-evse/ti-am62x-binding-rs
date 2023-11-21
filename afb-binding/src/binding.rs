@@ -25,9 +25,9 @@ use rpmsg::prelude::*;
 
 pub(crate) struct ApiUserData {
     pub uid: &'static str,
-    pub devname: Option<&'static str>,
+    pub cdev: Option<&'static str>,
     pub eptname: &'static str,
-    pub eptnum: i32,
+    pub rport: i32,
     pub tic: u32,
 }
 
@@ -71,7 +71,7 @@ pub fn binding_init(rootv4: AfbApiV4, jconf: JsoncObj) -> Result<&'static AfbApi
         ""
     };
 
-    let devname = if let Ok(value) = jconf.get::<String>("devname") {
+    let cdev = if let Ok(value) = jconf.get::<String>("cdev") {
         Some(to_static_str(value))
     } else {
         None
@@ -89,10 +89,10 @@ pub fn binding_init(rootv4: AfbApiV4, jconf: JsoncObj) -> Result<&'static AfbApi
         "tux-evse-rmsg"
     };
 
-    let eptnum = if let Ok(value) = jconf.get::<i32>("ept_num") {
+    let rport = if let Ok(value) = jconf.get::<i32>("ept_num") {
         value
     } else {
-        14
+        14 // default ti firmware sample
     };
 
     let tic = if let Ok(value) = jconf.get::<u32>("ept_tic") {
@@ -109,9 +109,9 @@ pub fn binding_init(rootv4: AfbApiV4, jconf: JsoncObj) -> Result<&'static AfbApi
 
     let config = ApiUserData {
         uid,
-        devname,
+        cdev,
+        rport,
         eptname,
-        eptnum,
         tic,
     };
 

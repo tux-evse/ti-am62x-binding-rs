@@ -11,7 +11,8 @@
         //"path": "/usr/redpesk/ti-am62x-binding-rs/lib/libafb_tiam62x.so",
         "path": "/home/fulup/.cargo/build/debug/libafb_tiam62x.so",
         "info": "Ti MCU(am62x) firmware rpmsg/openamp API",
-        "epnum": 14,
+        // "cdev": "rpmsg_chrdev",
+        "rport": 14,
         "eptname": "rpmsg_tuxevse"
     }
   ]
