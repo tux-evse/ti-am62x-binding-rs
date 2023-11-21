@@ -19,18 +19,18 @@
  *  interfacing through kernel RPMSG the firmware running in the MCU/M4 cortex.
  */
 use std::cell::Cell;
-use std::sync::Arc;
+use std::rc::Rc;
 
-use rpmsg::prelude::*;
 use crate::prelude::*;
 use afbv4::prelude::*;
+use rpmsg::prelude::*;
 
 // protobuf maximum buffer size
 const PROTOBUF_MAX_CAPACITY: usize = 256;
 
 // timer ctx and callback
 struct DevTimerCtx {
-    dev: Arc<TiRpmsg>,
+    dev: Rc<TiRpmsg>,
     heartbeat: Vec<u8>,
 }
 AfbTimerRegister!(TimerCtrl, timer_callback, DevTimerCtx);
@@ -47,11 +47,12 @@ fn timer_callback(timer: &AfbTimer, _decount: u32, ctx: &mut DevTimerCtx) {
 // on event ctx and callback
 struct DevAsyncCtx {
     count: Cell<u32>,
-    dev: Arc<TiRpmsg>,
+    dev: Rc<TiRpmsg>,
     evt: &'static AfbEvent,
 }
 AfbEvtFdRegister!(DecAsyncCtrl, async_dev_cb, DevAsyncCtx);
 fn async_dev_cb(_event: &AfbEvtFd, revent: u32, ctx: &mut DevAsyncCtx) {
+    afb_log_msg!(Debug, None, "**** Rpmsg data in");
     if revent == AfbEvtFdPoll::IN.bits() {
         let mut buffer: Vec<u8> = Vec::with_capacity(PROTOBUF_MAX_CAPACITY);
         match ctx.dev.read(&mut buffer) {
@@ -60,7 +61,7 @@ fn async_dev_cb(_event: &AfbEvtFd, revent: u32, ctx: &mut DevAsyncCtx) {
                 afb_log_msg!(Critical, None, "{}", error);
                 return;
             }
-        }//
+        } //
 
         match msg_uncode(&buffer) {
             EventMsg::Err(error) => {
@@ -70,7 +71,6 @@ fn async_dev_cb(_event: &AfbEvtFd, revent: u32, ctx: &mut DevAsyncCtx) {
             EventMsg::Heartbeat() => {
                 let count = ctx.count.get() + 1;
                 ctx.count.set(count);
-
                 afb_log_msg!(Debug, None, "Device heartbeat count={}", count);
             }
 
@@ -110,7 +110,7 @@ fn unsubscribe_callback(
 }
 
 struct EnableData {
-    dev: Arc<TiRpmsg>,
+    dev: Rc<TiRpmsg>,
     enable: Vec<u8>,
     disable: Vec<u8>,
 }
@@ -134,7 +134,7 @@ fn enable_callback(
 }
 
 struct PowerData {
-    dev: Arc<TiRpmsg>,
+    dev: Rc<TiRpmsg>,
     enable: Vec<u8>,
     disable: Vec<u8>,
 }
@@ -158,7 +158,7 @@ fn power_callback(
 }
 
 struct SetpwmData {
-    dev: Arc<TiRpmsg>,
+    dev: Rc<TiRpmsg>,
 }
 AfbVerbRegister!(SetpwmCtrl, setpwm_callback, SetpwmData);
 fn setpwm_callback(
@@ -183,13 +183,11 @@ fn setpwm_callback(
 }
 
 pub(crate) fn register(api: &mut AfbApi, config: &ApiUserData) -> Result<(), AfbError> {
-
     // register custom afb-v4 type converter
-    rpmsg_register() ?;
-
+    rpmsg_register()?;
 
     let ti_dev = TiRpmsg::new(config.devname, config.eptnum, config.eptname)?;
-    let handle = Arc::new(ti_dev);
+    let handle = Rc::new(ti_dev);
 
     // create event and store it within callback context
     let event = AfbEvent::new(config.uid);
@@ -234,22 +232,24 @@ pub(crate) fn register(api: &mut AfbApi, config: &ApiUserData) -> Result<(), Afb
         .set_usage("no input")
         .finalize()?;
 
+    let ctx = EnableCtrl {
+        dev: handle.clone(),
+        enable: mk_enable()?,
+        disable: mk_disable()?,
+    };
     let dev_enable = AfbVerb::new("enable")
-        .set_callback(Box::new(EnableCtrl {
-            dev: handle.clone(),
-            enable: mk_enable()?,
-            disable: mk_disable()?,
-        }))
+        .set_callback(Box::new(ctx))
         .set_info("enable/disable Iec6185 event")
         .set_usage("true/false")
         .finalize()?;
 
+    let ctx = PowerCtrl {
+        dev: handle.clone(),
+        enable: mk_power(true)?,
+        disable: mk_power(false)?,
+    };
     let allow_power = AfbVerb::new("power")
-        .set_callback(Box::new(PowerCtrl {
-            dev: handle.clone(),
-            enable: mk_power(true)?,
-            disable: mk_power(false)?,
-        }))
+        .set_callback(Box::new(ctx))
         .set_info("power/disable Iec6185 event")
         .set_usage("true/false")
         .finalize()?;

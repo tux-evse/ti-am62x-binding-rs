@@ -59,7 +59,7 @@ pub fn binding_init(rootv4: AfbApiV4, jconf: JsoncObj) -> Result<&'static AfbApi
         "ti-am62x"
     };
 
-    let apiname = if let Ok(value) = jconf.get::<String>("api_name") {
+    let apiname = if let Ok(value) = jconf.get::<String>("api") {
         to_static_str(value)
     } else {
         "ti-rmsg"
@@ -71,22 +71,22 @@ pub fn binding_init(rootv4: AfbApiV4, jconf: JsoncObj) -> Result<&'static AfbApi
         ""
     };
 
-    let socname = if let Ok(value) = jconf.get::<String>("soc_name") {
+    let devname = if let Ok(value) = jconf.get::<String>("devname") {
         Some(to_static_str(value))
     } else {
         None
     };
 
-    let devname = if let Ok(value) = jconf.get::<String>("dev_name") {
+    let socname = if let Ok(value) = jconf.get::<String>("socname") {
         Some(to_static_str(value))
     } else {
         None
     };
 
-    let eptname = if let Ok(value) = jconf.get::<String>("ept_name") {
+    let eptname = if let Ok(value) = jconf.get::<String>("eptname") {
         to_static_str(value)
     } else {
-        "powerboard_rmsg"
+        "tux-evse-rmsg"
     };
 
     let eptnum = if let Ok(value) = jconf.get::<i32>("ept_num") {
@@ -117,10 +117,6 @@ pub fn binding_init(rootv4: AfbApiV4, jconf: JsoncObj) -> Result<&'static AfbApi
 
     // initialization of ti rpm_char_lib should be done once at initialization
     ti_init(socname)?;
-
-    // register data converter
-    //sockdata_register(rootv4)?;
-
 
     // create a new api
     let api = AfbApi::new(apiname)

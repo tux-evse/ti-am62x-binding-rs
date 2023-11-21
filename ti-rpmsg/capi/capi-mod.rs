@@ -111,7 +111,7 @@ impl TiRpmsg {
         if count != len as isize {
             return Err(AfbError::new(
                 "rpmsg-write-fail",
-                format!("fail to write {}bytes count={}", len, count),
+                format!("fail to write bytes:{} count:{}", len, count),
             ));
         }
         Ok(())

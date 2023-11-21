@@ -17,3 +17,16 @@ SuSE uses a custom name for protobuf package and binary, and because of protoc e
  * zipper install protobuf-c
  * in your environment add ```export  PROTOC=/usr/bin/protoc-c```  (warning: a link cannot do the job)
 
+check devices:
+
+# list platform devices
+ ls -l /sys/bus/platform/devices | grep m4
+
+# list virtio devices
+ ls -l /sys/bus/virtio/devices | grep m4
+
+# list control device
+ls -l /sys/bus/rpmsg/drivers/rpmsg_chrdev/virtio* | grep m4
+
+# debug
+cat /sys/kernel/debug/remoteproc/remoteproc0/trace0

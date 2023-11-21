@@ -50,7 +50,7 @@ pub fn mk_disable() -> Result<Vec<u8>, AfbError> {
 
 pub fn mk_enable() -> Result<Vec<u8>, AfbError> {
     let msg = pbuf::HighToLow {
-        message: Some(pbuf::high_to_low::Message::Disable(pbuf::Empty {})),
+        message: Some(pbuf::high_to_low::Message::Enable(pbuf::Empty {})),
     };
     let mut buffer = Vec::with_capacity(msg.encoded_len());
     match msg.encode(&mut buffer) {

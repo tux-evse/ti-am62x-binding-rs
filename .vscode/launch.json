@@ -5,12 +5,26 @@
     "version": "0.2.0",
     "configurations": [
         {
+            "name": "Native",
             "type": "lldb",
+            "preLaunchTask": "binding-native-build",
             "request": "launch",
-            "name": "Debug",
-            "program": "${workspaceFolder}/<executable file>",
-            "args": [],
-            "cwd": "${workspaceFolder}"
+            "program": "afb-binder",
+            "env": {
+                "LD_LIBRARY_PATH": "/usr/local/lib64"
+            },
+            "args": [
+                "-vvv",
+                "--monitoring",
+                "--trap-faults=0",
+                "--tracereq=all",
+                "--config=afb-binding/etc/binding-ti-am62x.json",
+            ],
+            "cwd": "${workspaceFolder}",
+            "initCommands": [
+                "target stop-hook add -n _start -o continue",
+                "settings set target.disable-aslr false",
+            ]
         }
     ]
 }
