@@ -29,4 +29,14 @@ check devices:
 ls -l /sys/bus/rpmsg/drivers/rpmsg_chrdev/virtio* | grep m4
 
 # debug
+
+# check journal
+journalctl | grep virtio => addr==epnum
+
+# check PID waiting on remote proc
 cat /sys/kernel/debug/remoteproc/remoteproc0/trace0
+lsof /dev/rpmsg0 # recuperer le PID
+ls -l /proc/PID/fd/* | grep rpmsg
+
+# check firmware loaded on rproc0
+cat /sys/class/remoteproc/remoteproc0/firmware
