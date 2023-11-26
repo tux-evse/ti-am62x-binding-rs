@@ -61,7 +61,7 @@ fn async_dev_cb(_event: &AfbEvtFd, revent: u32, ctx: &mut DevAsyncCtx) {
                 afb_log_msg!(Critical, None, "{}", error);
                 return;
             }
-        } //
+        }
 
         match msg_uncode(&buffer) {
             EventMsg::Err(error) => {
