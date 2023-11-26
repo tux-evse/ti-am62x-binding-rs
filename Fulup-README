@@ -4,7 +4,11 @@ Provides:
 * Rust binding to Pionix [ti-am62x-evse-sdk](https://github.com/PionixPublic/ti-am62x-evse-sdk)
 * afb-binding micro service architecture and security model [api-v4](https://github.com/redpesk-common/afb-librust/blob/master/docs/1-architecture_presentation.md)
 
-Dependencies:
+
+## Reference
+https://software-dl.ti.com/processor-sdk-linux/esd/AM64X/latest/exports/docs/linux/Foundational_Components_IPC64x.html
+
+## Dependencies:
 * C/lib ti_rpmsg_char: git://git.ti.com/rpmsg/ti-rpmsg-char.git
 * C compiler for build.rs code generation
 * protobuf-compiler: dnf install protobuf-compiler (for OpenSuse check [1])
@@ -19,24 +23,31 @@ SuSE uses a custom name for protobuf package and binary, and because of protoc e
 
 check devices:
 
-# list platform devices
+## list platform devices
  ls -l /sys/bus/platform/devices | grep m4
 
-# list virtio devices
+## list virtio devices
  ls -l /sys/bus/virtio/devices | grep m4
 
-# list control device
+## list control device
 ls -l /sys/bus/rpmsg/drivers/rpmsg_chrdev/virtio* | grep m4
 
-# debug
+## debug
 
-# check journal
+## rpmsg_char_simple
+
+## check journal
 journalctl | grep virtio => addr==epnum
 
-# check PID waiting on remote proc
+## check PID waiting on remote proc
 cat /sys/kernel/debug/remoteproc/remoteproc0/trace0
 lsof /dev/rpmsg0 # recuperer le PID
 ls -l /proc/PID/fd/* | grep rpmsg
 
-# check firmware loaded on rproc0
+## check firmware loaded on rproc0
 cat /sys/class/remoteproc/remoteproc0/firmware
+
+
+## TBD Fulup
+ linker en mode debug natif et tester la buffer
+ lowToHigh heartbeat 0x12,0 (count=2)

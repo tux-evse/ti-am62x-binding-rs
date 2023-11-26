@@ -96,22 +96,21 @@ pub fn mk_pwm(state: &PwmState, duty_cycle: f32) -> Result<Vec<u8>, AfbError> {
     }
 }
 
-
 // decode message from encoded buffer
 pub fn msg_uncode(buffer: &Vec<u8>) -> EventMsg {
     match pbuf::LowToHigh::decode(buffer.as_slice()) {
         Err(error) => EventMsg::Err(AfbError::new("decoding-buffer-error", format!("{}", error))),
         Ok(data) => match data.message {
-            None => EventMsg::Err(AfbError::new("decoding-buffer-error", "no data to decode")),
+            None => EventMsg::Err(AfbError::new("decoding-buffer-empty", "no data to decode")),
             Some(msg) => match msg {
-                pbuf::low_to_high::Message::Event(value) => match Iso6185Msg::from_i32(value) {
-                    Some(iec) => EventMsg::Msg(iec),
-                    None => EventMsg::Err(AfbError::new(
-                        "decoding-buffer-error",
-                        format!("unknown iec6185 value={}", value),
+                pbuf::low_to_high::Message::Heartbeat(_) => EventMsg::Heartbeat(),
+                pbuf::low_to_high::Message::Event(value) => match Iso6185Msg::try_from(value) {
+                    Ok(iec) => EventMsg::Msg(iec),
+                    Err(error) => EventMsg::Err(AfbError::new(
+                        "decoding-ioc6185-error",
+                        format!("unknown iec6185 value={} error={}", value, error),
                     )),
                 },
-                pbuf::low_to_high::Message::Heartbeat(_) => EventMsg::Heartbeat(),
             },
         },
     }
