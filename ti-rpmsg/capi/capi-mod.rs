@@ -124,7 +124,7 @@ impl TiRpmsg {
 
         // extract raw buffer from vector
         let len = buffer.capacity();
-        let ptr = buffer.as_ptr() as *mut ::std::os::raw::c_void;
+        let ptr = buffer.as_mut_ptr() as *mut ::std::os::raw::c_void;
 
         let count = unsafe { cglue::read(handle.fd, ptr, len) };
         if count == len as isize {
@@ -133,6 +133,9 @@ impl TiRpmsg {
                 format!("fail to read (buffer too-small?) count={}", count),
             ));
         }
+
+        println! ("rpmsg buffer=[{:#02x},{:#02x}]", buffer[0], buffer[1]);
+
         // resize buffer to read data size
         buffer.resize(count as usize, 0);
         Ok(())
