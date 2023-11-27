@@ -18,6 +18,7 @@
  *  following code is a RUST an API version of Pionix ti-am62x-evse-sdk user space module
  *  interfacing through kernel RPMSG the firmware running in the MCU/M4 cortex.
  */
+use std::mem::MaybeUninit;
 use std::cell::Cell;
 use std::rc::Rc;
 
@@ -53,7 +54,9 @@ struct DevAsyncCtx {
 AfbEvtFdRegister!(DecAsyncCtrl, async_dev_cb, DevAsyncCtx);
 fn async_dev_cb(_event: &AfbEvtFd, revent: u32, ctx: &mut DevAsyncCtx) {
     if revent == AfbEvtFdPoll::IN.bits() {
-        let mut buffer: Vec<u8> = Vec::with_capacity(PROTOBUF_MAX_CAPACITY);
+
+        #[allow(invalid_value)]
+        let mut buffer: [u8; PROTOBUF_MAX_CAPACITY as usize] = unsafe { MaybeUninit::uninit().assume_init() };
         match ctx.dev.read(&mut buffer) {
             Ok(_) => {},
             Err(error) => {

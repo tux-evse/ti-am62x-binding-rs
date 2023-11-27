@@ -117,13 +117,13 @@ impl TiRpmsg {
         Ok(())
     }
 
-    pub fn read(&self, buffer: &mut Vec<u8>) -> Result<(), AfbError> {
+    pub fn read(&self, buffer: &mut[u8]) -> Result<isize, AfbError> {
 
         // extract C mutable handle and write buffer
         let handle = unsafe { &mut *self.handle };
 
         // extract raw buffer from vector
-        let len = buffer.capacity();
+        let len = buffer.len();
         let ptr = buffer.as_mut_ptr() as *mut ::std::os::raw::c_void;
 
         let count = unsafe { cglue::read(handle.fd, ptr, len) };
@@ -135,9 +135,6 @@ impl TiRpmsg {
         }
 
         println! ("rpmsg buffer=[{:#02x},{:#02x}]", buffer[0], buffer[1]);
-
-        // resize buffer to read data size
-        buffer.resize(count as usize, 0);
-        Ok(())
+        Ok(count)
     }
 }

@@ -113,8 +113,8 @@ pub fn mk_pwm(state: &PwmState, duty_cycle: f32) -> Result<Vec<u8>, AfbError> {
 }
 
 // decode message from encoded buffer
-pub fn msg_uncode(buffer: &Vec<u8>) -> EventMsg {
-    match pbuf::LowToHigh::decode(buffer.as_slice()) {
+pub fn msg_uncode(buffer: &[u8]) -> EventMsg {
+    match pbuf::LowToHigh::decode(buffer) {
         Err(error) => EventMsg::Err(AfbError::new("decoding-buffer-error", format!("{}", error))),
         Ok(data) => match data.message {
             None => EventMsg::Err(AfbError::new("decoding-buffer-empty", "no data to decode")),
