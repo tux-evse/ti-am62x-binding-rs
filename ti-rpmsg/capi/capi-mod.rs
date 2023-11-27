@@ -18,7 +18,7 @@
  *  of this file. Please review the following information to ensure the GNU
  *  General Public License requirements will be met
  *  https://www.gnu.org/licenses/gpl-3.0.html.
- * $RP_END_LICENSE$
+ *  $RP_END_LICENSE$
  */
 
 #![allow(dead_code)]

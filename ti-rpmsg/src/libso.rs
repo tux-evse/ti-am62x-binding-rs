@@ -18,6 +18,11 @@
 #[cfg(not(afbv4))]
 extern crate afbv4;
 
+#[cfg(test)]
+#[path = "../test/test-proto.rs"]
+mod test;
+
+
 #[path = "../capi/capi-mod.rs"]
 mod capi;
 
