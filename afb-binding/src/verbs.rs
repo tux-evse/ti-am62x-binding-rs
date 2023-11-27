@@ -52,16 +52,17 @@ struct DevAsyncCtx {
 }
 AfbEvtFdRegister!(DecAsyncCtrl, async_dev_cb, DevAsyncCtx);
 fn async_dev_cb(_event: &AfbEvtFd, revent: u32, ctx: &mut DevAsyncCtx) {
-    afb_log_msg!(Debug, None, "**** Rpmsg data in");
     if revent == AfbEvtFdPoll::IN.bits() {
         let mut buffer: Vec<u8> = Vec::with_capacity(PROTOBUF_MAX_CAPACITY);
         match ctx.dev.read(&mut buffer) {
-            Ok(value) => value,
+            Ok(_) => {},
             Err(error) => {
                 afb_log_msg!(Critical, None, "{}", error);
                 return;
             }
         }
+
+        println! ("rpmsg buffer=[{:#02x},{:#02x}]", buffer[0], buffer[1]);
 
         match msg_uncode(&buffer) {
             EventMsg::Err(error) => {

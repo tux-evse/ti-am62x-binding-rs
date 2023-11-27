@@ -21,7 +21,8 @@ use crate::prelude::*;
 
 #[test]
 fn mk_heartbeat() {
-        let buffer: Vec<u8> = [0x12, 0x00].to_vec();
+        //let buffer: Vec<u8> = [0x12, 0x00].to_vec();
+        let buffer=mk_lowbeat().unwrap();
 
         match msg_uncode(&buffer) {
             EventMsg::Heartbeat() => {println! ("OK heartbeat")},

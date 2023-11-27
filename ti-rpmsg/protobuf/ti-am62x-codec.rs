@@ -84,6 +84,22 @@ pub fn mk_heartbeat() -> Result<Vec<u8>, AfbError> {
     }
 }
 
+// for test purpose only
+pub fn mk_lowbeat() -> Result<Vec<u8>, AfbError> {
+    let msg = pbuf::LowToHigh {
+        message: Some(pbuf::low_to_high::Message::Heartbeat(pbuf::McuHeartbeat{})),
+    };
+    let mut buffer = Vec::with_capacity(msg.encoded_len());
+    match msg.encode(&mut buffer) {
+        Ok(()) => Ok(buffer),
+        Err(error) => Err(AfbError::new(
+            "encoding-heartbeat-fail",
+            format!("{}", error),
+        )),
+    }
+}
+
+
 pub fn mk_pwm(state: &PwmState, duty_cycle: f32) -> Result<Vec<u8>, AfbError> {
 
     let msg = pbuf::HighToLow {
