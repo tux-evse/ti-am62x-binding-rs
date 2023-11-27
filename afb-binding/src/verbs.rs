@@ -57,17 +57,17 @@ fn async_dev_cb(_event: &AfbEvtFd, revent: u32, ctx: &mut DevAsyncCtx) {
 
         #[allow(invalid_value)]
         let mut buffer: [u8; PROTOBUF_MAX_CAPACITY as usize] = unsafe { MaybeUninit::uninit().assume_init() };
-        match ctx.dev.read(&mut buffer) {
-            Ok(_) => {},
+        let len= match ctx.dev.read(&mut buffer) {
+            Ok(len) => {len},
             Err(error) => {
                 afb_log_msg!(Critical, None, "{}", error);
                 return;
             }
-        }
+        };
 
         println! ("rpmsg buffer=[{:#02x},{:#02x}]", buffer[0], buffer[1]);
 
-        match msg_uncode(&buffer) {
+        match msg_uncode(&buffer[0..len]) {
             EventMsg::Err(error) => {
                 afb_log_msg!(Critical, None, "{}", error);
             }

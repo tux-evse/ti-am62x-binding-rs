@@ -117,7 +117,7 @@ impl TiRpmsg {
         Ok(())
     }
 
-    pub fn read(&self, buffer: &mut[u8]) -> Result<isize, AfbError> {
+    pub fn read(&self, buffer: &mut[u8]) -> Result<usize, AfbError> {
 
         // extract C mutable handle and write buffer
         let handle = unsafe { &mut *self.handle };
@@ -133,8 +133,6 @@ impl TiRpmsg {
                 format!("fail to read (buffer too-small?) count={}", count),
             ));
         }
-
-        println! ("rpmsg buffer=[{:#02x},{:#02x}]", buffer[0], buffer[1]);
-        Ok(count)
+        Ok(count as usize)
     }
 }
