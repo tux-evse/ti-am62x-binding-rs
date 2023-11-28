@@ -14,10 +14,9 @@
  *
  */
 
-
 // Attention pour simplifier l'écriture des test le séparateur '\i' est remplacé par '|'
-use std::mem::MaybeUninit;
 use crate::prelude::*;
+use std::mem::MaybeUninit;
 
 extern "C" {
     pub fn memcpy(
@@ -28,21 +27,43 @@ extern "C" {
 }
 
 #[test]
-fn mk_heartbeat() {
-        let buffer: [u8;2]= [0x12,0x00];
+fn check_heartbeat() {
+    let buffer: [u8; 2] = [0x12, 0x00]; // low_to_high heartbeat
 
-        match msg_uncode(&buffer) {
-            EventMsg::Heartbeat() => {println! ("OK heartbeat")},
-            _ => panic! ("fail to decode heartbeat")
+    match msg_uncode(&buffer) {
+        EventMsg::Heartbeat() => {
+            println!("OK heartbeat")
         }
+        _ => panic!("fail to decode heartbeat"),
+    }
 }
 
 #[test]
-fn test_buffer() {
-        let src: [u8;2]= [0x20,0x30];
+fn capi_get_heartbeat() {
+    let src: [u8; 2] = [0x12, 0x0]; // low_to_high heartbeat
 
-        #[allow(invalid_value)]
-        let buffer: [u8; 256 as usize] = unsafe { MaybeUninit::uninit().assume_init() };
-        unsafe { memcpy(&buffer as *const _ as *mut ::std::os::raw::c_void , src.as_ptr() as *const ::std::os::raw::c_void, 256)};
-        println! ("buffer({})=[{:#02x},{:#02x}]", buffer.len(),buffer[0], buffer[1]);
+    // initialized buffer
+    #[allow(invalid_value)]
+    let buffer: [u8; 256 as usize] = unsafe { MaybeUninit::uninit().assume_init() };
+
+    // simulate C low level read
+    unsafe {
+        memcpy(
+            &buffer as *const _ as *mut ::std::os::raw::c_void,
+            src.as_ptr() as *const ::std::os::raw::c_void,
+            buffer.len(),
+        )
+    };
+
+    // shorten receiving buffer to source size
+    let data = &buffer[0..src.len()];
+    println!("receive data={:#X?}", data);
+
+    // assert buffer match heartbeat encoding
+    match msg_uncode(data) {
+        EventMsg::Heartbeat() => {
+            println!("OK data == heartbeat")
+        }
+        _ => panic!("fail to decode heartbeat"),
+    }
 }

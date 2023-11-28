@@ -1,5 +1,6 @@
 {
   "name": "afb-ti-am62x",
+  "tracereq":"all",
   "no-ldpaths": true,
   "alias": ["/devtools:/usr/share/afb-ui-devtools/binder"],
 
@@ -7,8 +8,9 @@
     {
         "uid": "ti-am62x",
         "api": "tiam62x",
-        "info": "Ti MCU(am62x) firmware rpmsg/openamp API",
-        "path": "/usr/redpesk/ti-am62x-binding-rs/lib/libafb_tiam62x.so",
+        "info": "Ti MCU(am62x) native desktop debug API",
+        "path": "/home/fulup/.cargo/build/debug/libafb_tiam62x.so",
+        "cdev": "rpmsg_chrdev",
         "eptname": "rpmsg_tuxevse",
         "rport": 14
     }

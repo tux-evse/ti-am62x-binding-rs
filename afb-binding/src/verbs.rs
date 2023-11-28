@@ -65,9 +65,10 @@ fn async_dev_cb(_event: &AfbEvtFd, revent: u32, ctx: &mut DevAsyncCtx) {
             }
         };
 
-        println! ("rpmsg buffer=[{:#02x},{:#02x}]", buffer[0], buffer[1]);
+        let data= &buffer[0..len];
+        afb_log_msg!(Debug, None,format!("rpmsg data={:X?}(hexa)", data));
 
-        match msg_uncode(&buffer[0..len]) {
+        match msg_uncode(data) {
             EventMsg::Err(error) => {
                 afb_log_msg!(Critical, None, "{}", error);
             }

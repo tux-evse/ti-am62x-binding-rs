@@ -84,7 +84,7 @@ pub fn mk_heartbeat() -> Result<Vec<u8>, AfbError> {
     }
 }
 
-// for test purpose only
+// for test only
 pub fn mk_lowbeat() -> Result<Vec<u8>, AfbError> {
     let msg = pbuf::LowToHigh {
         message: Some(pbuf::low_to_high::Message::Heartbeat(pbuf::McuHeartbeat{})),
