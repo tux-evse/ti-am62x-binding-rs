@@ -30,7 +30,7 @@ mod cglue {
     include!("./_capi-map.rs");
 }
 
-use afbv4::prelude::AfbError;
+use afbv4::prelude::{afb_error, AfbError};
 //use std::ffi::CStr;
 use std::ffi::CString;
 
@@ -41,6 +41,7 @@ pub struct TiRpmsg {
 // This function initialize ti-rmsg lib. Use socname=Null for auto detection
 // Return nothing or error. Note that this function should be called only once
 // at library initialization anf before any other rpmsg call.
+#[track_caller]
 pub fn ti_init(socname: Option<&str>) -> Result<(), AfbError> {
     let name = match socname {
         None => 0 as *mut ::std::os::raw::c_char,
@@ -52,7 +53,7 @@ pub fn ti_init(socname: Option<&str>) -> Result<(), AfbError> {
 
     let rc = unsafe { cglue::rpmsg_char_init(name) };
     if rc < 0 {
-        return Err(AfbError::new("ti-rmsg-init", "Fail to initialize library"));
+        return afb_error!("ti-rmsg-init", "Fail to initialize library");
     }
 
     Ok(())
@@ -63,6 +64,7 @@ pub fn ti_exit() {
 }
 
 impl TiRpmsg {
+    #[track_caller]
     pub fn new(cdev: Option<&str>, rport: i32, eptname: &str) -> Result<TiRpmsg, AfbError> {
         let cdev = match cdev {
             None => 0 as *mut ::std::os::raw::c_char,
@@ -86,10 +88,7 @@ impl TiRpmsg {
         };
 
         if handle == 0 as *mut cglue::rpmsg_char_dev {
-            return Err(AfbError::new(
-                "ti-rmsg-open",
-                "Fail to open ti-rpmsg device",
-            ));
+            return afb_error!("ti-rmsg-open", "Fail to open ti-rpmsg device");
         }
 
         Ok(TiRpmsg { handle })
@@ -100,6 +99,7 @@ impl TiRpmsg {
         handle.fd
     }
 
+    #[track_caller]
     pub fn write(&self, buffer: &Vec<u8>) -> Result<(), AfbError> {
         // extract raw buffer from vector
         let len = buffer.capacity();
@@ -109,16 +109,18 @@ impl TiRpmsg {
         let handle = unsafe { &mut *self.handle };
         let count = unsafe { cglue::write(handle.fd, ptr, len) };
         if count != len as isize {
-            return Err(AfbError::new(
+            return afb_error!(
                 "rpmsg-write-fail",
-                format!("fail to write bytes:{} count:{}", len, count),
-            ));
+                "fail to write bytes:{} count:{}",
+                len,
+                count
+            );
         }
         Ok(())
     }
 
-    pub fn read(&self, buffer: &mut[u8]) -> Result<usize, AfbError> {
-
+    #[track_caller]
+    pub fn read(&self, buffer: &mut [u8]) -> Result<usize, AfbError> {
         // extract C mutable handle and write buffer
         let handle = unsafe { &mut *self.handle };
 
@@ -128,10 +130,11 @@ impl TiRpmsg {
 
         let count = unsafe { cglue::read(handle.fd, ptr, len) };
         if count == len as isize {
-            return Err(AfbError::new(
+            return afb_error!(
                 "rpmsg-read-fail",
-                format!("fail to read (buffer too-small?) count={}", count),
-            ));
+                "fail to read (buffer too-small?) count={}",
+                count
+            );
         }
         Ok(count as usize)
     }

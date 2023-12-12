@@ -44,7 +44,7 @@ pub fn mk_disable() -> Result<Vec<u8>, AfbError> {
     let mut buffer = Vec::with_capacity(msg.encoded_len());
     match msg.encode(&mut buffer) {
         Ok(()) => Ok(buffer),
-        Err(error) => Err(AfbError::new("encoding-enable-fail", format!("{}", error))),
+        Err(error) => afb_error!("encoding-enable-fail", "{}", error),
     }
 }
 
@@ -55,7 +55,7 @@ pub fn mk_enable() -> Result<Vec<u8>, AfbError> {
     let mut buffer = Vec::with_capacity(msg.encoded_len());
     match msg.encode(&mut buffer) {
         Ok(()) => Ok(buffer),
-        Err(error) => Err(AfbError::new("encoding-enable-fail", format!("{}", error))),
+        Err(error) => afb_error!("encoding-enable-fail", "{}", error),
     }
 }
 
@@ -66,7 +66,7 @@ pub fn mk_power(allow: bool) -> Result<Vec<u8>, AfbError> {
     let mut buffer = Vec::with_capacity(msg.encoded_len());
     match msg.encode(&mut buffer) {
         Ok(()) => Ok(buffer),
-        Err(error) => Err(AfbError::new("encoding-power-fail", format!("{}", error))),
+        Err(error) => afb_error!("encoding-power-fail", "{}", error),
     }
 }
 
@@ -77,10 +77,10 @@ pub fn mk_heartbeat() -> Result<Vec<u8>, AfbError> {
     let mut buffer = Vec::with_capacity(msg.encoded_len());
     match msg.encode(&mut buffer) {
         Ok(()) => Ok(buffer),
-        Err(error) => Err(AfbError::new(
+        Err(error) => afb_error!(
             "encoding-heartbeat-fail",
-            format!("{}", error),
-        )),
+            "{}", error
+        ),
     }
 }
 
@@ -92,10 +92,10 @@ pub fn mk_lowbeat() -> Result<Vec<u8>, AfbError> {
     let mut buffer = Vec::with_capacity(msg.encoded_len());
     match msg.encode(&mut buffer) {
         Ok(()) => Ok(buffer),
-        Err(error) => Err(AfbError::new(
+        Err(error) => afb_error!(
             "encoding-heartbeat-fail",
-            format!("{}", error),
-        )),
+            "{}", error
+        ),
     }
 }
 
@@ -108,7 +108,7 @@ pub fn mk_pwm(state: &PwmState, duty_cycle: f32) -> Result<Vec<u8>, AfbError> {
     let mut buffer = Vec::with_capacity(msg.encoded_len());
     match msg.encode(&mut buffer) {
         Ok(()) => Ok(buffer),
-        Err(error) => Err(AfbError::new("encoding-setpwm-fail", format!("{}", error))),
+        Err(error) => afb_error!("encoding-setpwm-fail", "{}", error),
     }
 }
 
