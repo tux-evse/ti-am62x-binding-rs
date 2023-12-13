@@ -6,11 +6,17 @@
  * License: $RP_BEGIN_LICENSE$ SPDX:MIT https://opensource.org/licenses/MIT $RP_END_LICENSE$
  *
 */
-extern crate bindgen;
+use std::env;
 
 fn main() {
     let proto_path="protobuf";
     println!("cargo:rerun-if-changed=src/rpmsg-capi/ti-rpmsg-map.h");
+    println!("cargo:rustc-link-search=/usr/local/lib64");
+    if let Ok(value) = env::var("CARGO_TARGET_DIR") {
+        if let Ok(profile) = env::var("PROFILE") {
+            println!("cargo:rustc-link-search=crate={}{}", value, profile);
+        }
+    }
 
     // generate protobuf encoder/decoder
     prost_build::Config::new()
