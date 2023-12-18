@@ -18,8 +18,8 @@
  *  following code is a RUST an API version of Pionix ti-am62x-evse-sdk user space module
  *  interfacing through kernel RPMSG the firmware running in the MCU/M4 cortex.
  */
-use std::mem::MaybeUninit;
 use std::cell::Cell;
+use std::mem::MaybeUninit;
 use std::rc::Rc;
 
 use crate::prelude::*;
@@ -54,20 +54,18 @@ struct DevAsyncCtx {
 AfbEvtFdRegister!(DecAsyncCtrl, async_dev_cb, DevAsyncCtx);
 fn async_dev_cb(_event: &AfbEvtFd, revent: u32, ctx: &mut DevAsyncCtx) {
     if revent == AfbEvtFdPoll::IN.bits() {
-
         #[allow(invalid_value)]
-        let mut buffer: [u8; PROTOBUF_MAX_CAPACITY as usize] = unsafe { MaybeUninit::uninit().assume_init() };
-        let len= match ctx.dev.read(&mut buffer) {
-            Ok(len) => {len},
+        let mut buffer: [u8; PROTOBUF_MAX_CAPACITY as usize] =
+            unsafe { MaybeUninit::uninit().assume_init() };
+        let len = match ctx.dev.read(&mut buffer) {
+            Ok(len) => len,
             Err(error) => {
                 afb_log_msg!(Critical, None, "{}", error);
                 return;
             }
         };
 
-        let data= &buffer[0..len];
-        afb_log_msg!(Debug, None,format!("rpmsg data={:X?}(hexa)", data));
-
+        let data = &buffer[0..len];
         match msg_uncode(data) {
             EventMsg::Err(error) => {
                 afb_log_msg!(Critical, None, "{}", error);
@@ -92,24 +90,15 @@ struct SubscribeData {
 AfbVerbRegister!(SubscribeCtrl, subscribe_callback, SubscribeData);
 fn subscribe_callback(
     request: &AfbRequest,
-    _args: &AfbData,
+    args: &AfbData,
     ctx: &mut SubscribeData,
 ) -> Result<(), AfbError> {
-    ctx.evt.subscribe(request)?;
-    request.reply(AFB_NO_DATA, 0);
-    Ok(())
-}
-
-struct UnsubscribeData {
-    evt: &'static AfbEvent,
-}
-AfbVerbRegister!(UnsubscribeCtrl, unsubscribe_callback, UnsubscribeData);
-fn unsubscribe_callback(
-    request: &AfbRequest,
-    _args: &AfbData,
-    ctx: &mut UnsubscribeData,
-) -> Result<(), AfbError> {
-    ctx.evt.unsubscribe(request)?;
+    let subcription = args.get::<bool>(0)?;
+    if subcription {
+        ctx.evt.subscribe(request)?;
+    } else {
+        ctx.evt.unsubscribe(request)?;
+    }
     request.reply(AFB_NO_DATA, 0);
     Ok(())
 }
@@ -126,14 +115,12 @@ fn enable_callback(
     ctx: &mut EnableData,
 ) -> Result<(), AfbError> {
     let enable = args.get::<bool>(0)?;
-    let msg = if enable { &ctx.enable } else { &ctx.disable };
 
-    match ctx.dev.write(msg) {
-        Err(error) => {
-            afb_log_msg!(Critical, request, "enable({}):{}", enable, error);
-        }
-        Ok(()) => {}
+    let msg = if enable { &ctx.enable } else { &ctx.disable };
+    if let Err(error) =  ctx.dev.write(msg) {
+            return afb_error!("m4-rpc-fail", "enable({}):{}", enable, error);
     };
+
     request.reply(AFB_NO_DATA, 0);
     Ok(())
 }
@@ -149,15 +136,13 @@ fn power_callback(
     args: &AfbData,
     ctx: &mut PowerData,
 ) -> Result<(), AfbError> {
-    let power = args.get::<bool>(0)?;
-    let msg = if power { &ctx.enable } else { &ctx.disable };
+    let enable = args.get::<bool>(0)?;
 
-    match ctx.dev.write(msg) {
-        Err(error) => {
-            afb_log_msg!(Critical, request, "power(allow:{}):{}", power, error);
-        }
-        Ok(()) => {}
+    let msg = if enable { &ctx.enable } else { &ctx.disable };
+    if let Err(error) =  ctx.dev.write(msg) {
+            return afb_error!("m4-rpc-fail", "power({}):{}", enable, error);
     };
+
     request.reply(AFB_NO_DATA, 0);
     Ok(())
 }
@@ -172,20 +157,16 @@ fn setpwm_callback(
     ctx: &mut SetPwmData,
 ) -> Result<(), AfbError> {
     let state = args.get::<&PwmState>(0)?;
-    let cycle= if args.get_count() > 1 {
-            args.get::<f64>(1)?
+    let cycle = if args.get_count() > 1 {
+        args.get::<f64>(1)?
     } else {
         0.0
     };
 
     // this message cannot be build statically
     let msg = mk_pwm(state, cycle as f32)?;
-
-    match ctx.dev.write(&msg) {
-        Err(error) => {
-            afb_log_msg!(Critical, request, "setpwm:{}", error);
-        }
-        Ok(()) => {}
+    if let Err(error) =  ctx.dev.write(&msg) {
+            return afb_error!("m4-rpc-fail", "set_pwm({:?}):{}", state, error);
     };
     request.reply(AFB_NO_DATA, 0);
     Ok(())
@@ -226,15 +207,9 @@ pub(crate) fn register(api: &mut AfbApi, config: &ApiUserData) -> Result<(), Afb
         Ok(_timer) => Ok(()),
     }?;
 
-    let unsubscribe = AfbVerb::new("unsubscribe")
-        .set_callback(Box::new(UnsubscribeCtrl { evt: event }))
-        .set_info("unsubscribe Iec6185 event")
-        .set_usage("no input")
-        .finalize()?;
-
     let subscribe = AfbVerb::new("subscribe")
         .set_callback(Box::new(SubscribeCtrl { evt: event }))
-        .set_info("unsubscribe Iec6185 event")
+        .set_info("subscribe Iec6185 event")
         .set_usage("no input")
         .finalize()?;
 
@@ -246,8 +221,8 @@ pub(crate) fn register(api: &mut AfbApi, config: &ApiUserData) -> Result<(), Afb
 
     let dev_enable = AfbVerb::new("enable")
         .set_callback(Box::new(ctx))
-        .set_info("enable/disable Iec6185 event")
-        .set_usage("true/false")
+        .set_info("enable/disable Iec6185 event (true/false)")
+        .set_usage("TRUE|FALSE")
         .finalize()?;
 
     let ctx = SetPwmCtrl {
@@ -256,8 +231,8 @@ pub(crate) fn register(api: &mut AfbApi, config: &ApiUserData) -> Result<(), Afb
 
     let set_pwm = AfbVerb::new("pwm")
         .set_callback(Box::new(ctx))
-        .set_info("on/off pwm")
-        .set_usage("on/off")
+        .set_info("set_pwm (on/off)")
+        .set_usage("'ON'|'OFF'")
         .finalize()?;
 
     let ctx = PowerCtrl {
@@ -267,16 +242,22 @@ pub(crate) fn register(api: &mut AfbApi, config: &ApiUserData) -> Result<(), Afb
     };
     let allow_power = AfbVerb::new("power")
         .set_callback(Box::new(ctx))
-        .set_info("power/disable Iec6185 event")
+        .set_info("allow power (true/false)")
         .set_usage("true/false")
         .finalize()?;
 
     api.add_event(event);
     api.add_verb(subscribe);
     api.add_verb(set_pwm);
-    api.add_verb(unsubscribe);
     api.add_verb(dev_enable);
     api.add_verb(allow_power);
+
+    // init m4 firmware (set pwm-off and enable eic6185 event)
+    for msg in [mk_pwm(&PwmState::Off, 0.0)?, mk_enable()?] {
+        if let Err(error) = handle.write(&msg) {
+            return afb_error!("m4-init-fail", "firmware refused command error={}", error)
+        }
+    }
 
     Ok(())
 }
