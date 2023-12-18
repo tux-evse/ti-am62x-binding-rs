@@ -271,7 +271,7 @@ pub(crate) fn register(api: &mut AfbApi, config: &ApiUserData) -> Result<(), Afb
         .set_usage("true/false")
         .finalize()?;
 
-    //api.add_event(event);
+    api.add_event(event);
     api.add_verb(subscribe);
     api.add_verb(set_pwm);
     api.add_verb(unsubscribe);
