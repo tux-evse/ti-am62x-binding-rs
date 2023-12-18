@@ -67,3 +67,15 @@ fn capi_get_heartbeat() {
         _ => panic!("fail to decode heartbeat"),
     }
 }
+
+#[test]
+fn capi_check_anum() {
+
+    let state= PwmState::from_str_name("OFF");
+    let json= serde_json::to_string(&state).unwrap();
+    println! ("pwmstate= {}", json);
+
+    let deserialized: PwmState = serde_json::from_str("\"On\"").unwrap();
+    println! ("pwmstate= {:?}", deserialized);
+
+}

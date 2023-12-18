@@ -75,6 +75,7 @@ impl TiRpmsg {
         };
 
         let eptname = CString::new(eptname).expect("Invalid eptname string");
+        // Debug Ok(TiRpmsg { handle: 0 as *mut cglue::rpmsg_char_dev })
 
         let handle = unsafe {
             cglue::rpmsg_char_open(
@@ -90,8 +91,8 @@ impl TiRpmsg {
         if handle == 0 as *mut cglue::rpmsg_char_dev {
             return afb_error!("ti-rmsg-open", "Fail to open ti-rpmsg device");
         }
-
         Ok(TiRpmsg { handle })
+
     }
 
     pub fn get_fd(&self) -> ::std::os::raw::c_int {

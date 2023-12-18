@@ -11,14 +11,12 @@
             "request": "launch",
             "program": "afb-binder",
             "env": {
-                "LD_LIBRARY_PATH": "/usr/local/lib64"
+                "LD_LIBRARY_PATH": "/usr/local/lib64:/usr/local/lib"
             },
             "args": [
-                "-vvv",
-                "--monitoring",
+                "-v",
                 "--trap-faults=0",
-                "--tracereq=all",
-                "--config=afb-binding/etc/binding-ti-am62x.json",
+                "--config=afb-binding/etc/binding-desktop-debug.json",
             ],
             "cwd": "${workspaceFolder}",
             "initCommands": [

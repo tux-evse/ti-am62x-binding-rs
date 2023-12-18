@@ -22,7 +22,7 @@ fn main() {
     prost_build::Config::new()
         .default_package_filename("_ti-am62x-evse")
         .out_dir(proto_path)
-        .type_attribute(".", "#[derive(serde::Serialize, serde::Deserialize)]")
+        .type_attribute(".", "#[derive(serde::Serialize, serde::Deserialize)] #[serde(rename_all=\"SCREAMING-KEBAB-CASE\")]")
         .compile_protos(&[[proto_path, "high_to_low.proto"].join("/"),[proto_path,"low_to_high.proto"].join("/")], &[proto_path])
         // https://github.com/dflemstr/prost-simple-rpc
         //.service_generator(Box::new(prost_simple_rpc_build::ServiceGenerator::new())) //

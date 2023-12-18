@@ -53,6 +53,9 @@ impl AfbApiControls for ApiUserData {
 pub fn binding_init(rootv4: AfbApiV4, jconf: JsoncObj) -> Result<&'static AfbApi, AfbError> {
     afb_log_msg!(Info, rootv4, "config:{}", jconf);
 
+    // register custom afb-v4 type converter
+    rpmsg_register()?;
+
     let uid = if let Ok(value) = jconf.get::<String>("uid") {
         to_static_str(value)
     } else {
@@ -72,12 +75,6 @@ pub fn binding_init(rootv4: AfbApiV4, jconf: JsoncObj) -> Result<&'static AfbApi
     };
 
     let cdev = if let Ok(value) = jconf.get::<String>("cdev") {
-        Some(to_static_str(value))
-    } else {
-        None
-    };
-
-    let socname = if let Ok(value) = jconf.get::<String>("socname") {
         Some(to_static_str(value))
     } else {
         None
@@ -116,7 +113,7 @@ pub fn binding_init(rootv4: AfbApiV4, jconf: JsoncObj) -> Result<&'static AfbApi
     };
 
     // initialization of ti rpm_char_lib should be done once at initialization
-    ti_init(socname)?;
+    //ti_init(socname)?;
 
     // create a new api
     let api = AfbApi::new(apiname)

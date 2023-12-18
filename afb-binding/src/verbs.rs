@@ -172,7 +172,11 @@ fn setpwm_callback(
     ctx: &mut SetPwmData,
 ) -> Result<(), AfbError> {
     let state = args.get::<&PwmState>(0)?;
-    let cycle = args.get::<f64>(1)?;
+    let cycle= if args.get_count() > 1 {
+            args.get::<f64>(1)?
+    } else {
+        0.0
+    };
 
     // this message cannot be build statically
     let msg = mk_pwm(state, cycle as f32)?;
@@ -188,9 +192,6 @@ fn setpwm_callback(
 }
 
 pub(crate) fn register(api: &mut AfbApi, config: &ApiUserData) -> Result<(), AfbError> {
-    // register custom afb-v4 type converter
-    rpmsg_register()?;
-
     let ti_dev = TiRpmsg::new(config.cdev, config.rport, config.eptname)?;
     let handle = Rc::new(ti_dev);
 
@@ -270,7 +271,7 @@ pub(crate) fn register(api: &mut AfbApi, config: &ApiUserData) -> Result<(), Afb
         .set_usage("true/false")
         .finalize()?;
 
-    api.add_event(event);
+    //api.add_event(event);
     api.add_verb(subscribe);
     api.add_verb(set_pwm);
     api.add_verb(unsubscribe);
