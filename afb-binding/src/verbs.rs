@@ -162,14 +162,14 @@ fn power_callback(
     Ok(())
 }
 
-struct SetpwmData {
+struct SetPwmData {
     dev: Rc<TiRpmsg>,
 }
-AfbVerbRegister!(SetpwmCtrl, setpwm_callback, SetpwmData);
+AfbVerbRegister!(SetPwmCtrl, setpwm_callback, SetPwmData);
 fn setpwm_callback(
     request: &AfbRequest,
     args: &AfbData,
-    ctx: &mut SetpwmData,
+    ctx: &mut SetPwmData,
 ) -> Result<(), AfbError> {
     let state = args.get::<&PwmState>(0)?;
     let cycle = args.get::<f64>(1)?;
@@ -242,10 +242,21 @@ pub(crate) fn register(api: &mut AfbApi, config: &ApiUserData) -> Result<(), Afb
         enable: mk_enable()?,
         disable: mk_disable()?,
     };
+
     let dev_enable = AfbVerb::new("enable")
         .set_callback(Box::new(ctx))
         .set_info("enable/disable Iec6185 event")
         .set_usage("true/false")
+        .finalize()?;
+
+    let ctx = SetPwmCtrl {
+        dev: handle.clone(),
+    };
+
+    let set_pwm = AfbVerb::new("pwm")
+        .set_callback(Box::new(ctx))
+        .set_info("on/off pwm")
+        .set_usage("on/off")
         .finalize()?;
 
     let ctx = PowerCtrl {
@@ -261,6 +272,7 @@ pub(crate) fn register(api: &mut AfbApi, config: &ApiUserData) -> Result<(), Afb
 
     api.add_event(event);
     api.add_verb(subscribe);
+    api.add_verb(set_pwm);
     api.add_verb(unsubscribe);
     api.add_verb(dev_enable);
     api.add_verb(allow_power);
