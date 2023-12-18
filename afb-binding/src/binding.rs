@@ -116,7 +116,7 @@ pub fn binding_init(rootv4: AfbApiV4, jconf: JsoncObj) -> Result<&'static AfbApi
     };
 
     // initialization of ti rpm_char_lib should be done once at initialization
-    // ti_init(socname)?;
+    ti_init(socname)?;
 
     // create a new api
     let api = AfbApi::new(apiname)
