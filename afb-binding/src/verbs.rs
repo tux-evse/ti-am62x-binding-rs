@@ -210,7 +210,7 @@ pub(crate) fn register(api: &mut AfbApi, config: &ApiUserData) -> Result<(), Afb
     let subscribe = AfbVerb::new("subscribe")
         .set_callback(Box::new(SubscribeCtrl { evt: event }))
         .set_info("subscribe Iec6185 event")
-        .set_usage("no input")
+        .set_usage("TRUE|FALSE")
         .finalize()?;
 
     let ctx = EnableCtrl {
