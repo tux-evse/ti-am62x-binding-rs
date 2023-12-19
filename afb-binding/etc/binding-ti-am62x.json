@@ -10,7 +10,8 @@
         "info": "Ti MCU(am62x) firmware rpmsg/openamp API",
         "path": "/usr/redpesk/ti-am62x-binding-rs/lib/libafb_tiam62x.so",
         "eptname": "rpmsg_tuxevse",
-        "rport": 14
+        "rport": 14,
+        "tic": 5000
     }
   ]
 }

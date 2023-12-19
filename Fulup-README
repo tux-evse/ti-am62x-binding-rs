@@ -21,8 +21,29 @@ SuSE uses a custom name for protobuf package and binary, and because of protoc e
  * zipper install protobuf-c
  * in your environment add ```export  PROTOC=/usr/bin/protoc-c```  (warning: a link cannot do the job)
 
-check devices:
+## config
 
+  "binding": [
+    {
+        // binding name
+        "uid": "ti-am62x",
+        "info": "Ti MCU(am62x) native desktop debug API",
+
+        // afbv4 api name
+        "api": "tiam62x",
+
+        // binding path
+        "path": "$HOME/.cargo/build/debug/libafb_tiam62x.so",
+
+        // default value for rpmsg (should match firmware configuration)
+        "cdev": "rpmsg_chrdev",
+        "eptname": "rpmsg_tuxevse",
+        "rport": 14,
+
+        // heartbeat tic value in ms
+        "tic": 1000
+    }
+  ]
 ## list platform devices
  ls -l /sys/bus/platform/devices | grep m4
 
@@ -47,7 +68,7 @@ ls -l /proc/PID/fd/* | grep rpmsg
 ## check firmware loaded on rproc0
 cat /sys/class/remoteproc/remoteproc0/firmware
 
+## WARNING:
 
-## TBD Fulup
- linker en mode debug natif et tester la buffer
- lowToHigh heartbeat 0x12,0 (count=2)
+* send tiam62x/pwm=off to move CP from -12 to +12
+* send tiam62x/iec6185=true to enable device protobuf firmware event push

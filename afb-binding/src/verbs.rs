@@ -219,7 +219,7 @@ pub(crate) fn register(api: &mut AfbApi, config: &ApiUserData) -> Result<(), Afb
         disable: mk_disable()?,
     };
 
-    let dev_enable = AfbVerb::new("enable")
+    let dev_enable = AfbVerb::new("iec6185")
         .set_callback(Box::new(ctx))
         .set_info("enable/disable Iec6185 event (true/false)")
         .set_usage("TRUE|FALSE")

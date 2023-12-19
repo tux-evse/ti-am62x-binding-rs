@@ -12,7 +12,8 @@
         "path": "/home/fulup/.cargo/build/debug/libafb_tiam62x.so",
         "cdev": "rpmsg_chrdev",
         "eptname": "rpmsg_tuxevse",
-        "rport": 14
+        "rport": 14,
+        "tic": 5000
     }
   ]
 }
