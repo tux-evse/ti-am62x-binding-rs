@@ -210,7 +210,7 @@ pub(crate) fn register(api: &mut AfbApi, config: &ApiUserData) -> Result<(), Afb
     let subscribe = AfbVerb::new("subscribe")
         .set_callback(Box::new(SubscribeCtrl { evt: event }))
         .set_info("subscribe Iec6185 event")
-        .set_usage("TRUE|FALSE")
+        .set_usage("true|false")
         .finalize()?;
 
     let ctx = EnableCtrl {
@@ -222,7 +222,7 @@ pub(crate) fn register(api: &mut AfbApi, config: &ApiUserData) -> Result<(), Afb
     let dev_enable = AfbVerb::new("iec6185")
         .set_callback(Box::new(ctx))
         .set_info("enable/disable Iec6185 event (true/false)")
-        .set_usage("TRUE|FALSE")
+        .set_usage("true|false")
         .finalize()?;
 
     let ctx = SetPwmCtrl {
