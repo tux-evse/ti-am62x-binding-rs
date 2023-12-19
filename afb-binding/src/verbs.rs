@@ -80,13 +80,13 @@ fn async_dev_cb(_event: &AfbEvtFd, revent: u32, ctx: &mut DevAsyncCtx) {
 
             EventMsg::Msg(iso6185) => {
                 ctx.evt.push(iso6185.as_str_name());
-                match iso6185 {
-                        CarPluggedIn => {
+                // match iso6185 {
+                //         CarPluggedIn => {
 
-                        },
-                        CarRequestedStopPower => {}
-                        _ => {}
-                }
+                //         },
+                //         CarRequestedStopPower => {}
+                //         _ => {}
+                // }
             }
         };
     }
