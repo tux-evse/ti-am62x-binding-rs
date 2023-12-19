@@ -243,7 +243,7 @@ pub(crate) fn register(api: &mut AfbApi, config: &ApiUserData) -> Result<(), Afb
         .set_info("set_pwm")
         .set_usage("'action':'on/off','duty':0.05")
         .set_action("['on','off']")?
-        .set_sample("'action':'on', 'duty':0.05")?
+        .set_sample("{'action':'on', 'duty':0.05}")?
         .finalize()?;
 
     let ctx = PowerCtrl {
