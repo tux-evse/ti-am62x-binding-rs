@@ -70,12 +70,17 @@ fn capi_get_heartbeat() {
 
 #[test]
 fn capi_check_anum() {
+    let state = PwmState::from_str_name("OFF");
+    let json = serde_json::to_string(&state).unwrap();
+    println!("pwmstate= {}", json);
 
-    let state= PwmState::from_str_name("OFF");
-    let json= serde_json::to_string(&state).unwrap();
-    println! ("pwmstate= {}", json);
+    let message = SetPwm {
+        state: 0,
+        duty_cycle: 0.5,
+    };
+    let json= serde_json::to_string(&message).unwrap();
+    println!("setpwm= {}", json);
 
-    let deserialized: PwmState = serde_json::from_str("\"On\"").unwrap();
-    println! ("pwmstate= {:?}", deserialized);
-
+    //let pwm:SetPwm= serde_json::from_str("{\"STATE\":\"ON\",\"DUTY-CYCLE\":0.5}").unwrap();
+    //println!("setpwm= {:?}", pwm);
 }

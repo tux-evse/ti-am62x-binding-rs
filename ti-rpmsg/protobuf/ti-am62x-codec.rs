@@ -30,6 +30,7 @@ mod pbuf {
 // make public internal Iec61851Event
 pub type Iso6185Msg = pbuf::Iec61851Event;
 pub type PwmState= pbuf::PwmState;
+pub type SetPwm= pbuf::SetPwm;
 
 pub enum EventMsg {
     Msg(Iso6185Msg),

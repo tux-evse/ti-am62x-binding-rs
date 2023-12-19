@@ -50,6 +50,7 @@ struct DevAsyncCtx {
     count: Cell<u32>,
     dev: Rc<TiRpmsg>,
     evt: &'static AfbEvent,
+    apiv4: AfbApiV4,
 }
 AfbEvtFdRegister!(DecAsyncCtrl, async_dev_cb, DevAsyncCtx);
 fn async_dev_cb(_event: &AfbEvtFd, revent: u32, ctx: &mut DevAsyncCtx) {
@@ -79,6 +80,13 @@ fn async_dev_cb(_event: &AfbEvtFd, revent: u32, ctx: &mut DevAsyncCtx) {
 
             EventMsg::Msg(iso6185) => {
                 ctx.evt.push(iso6185.as_str_name());
+                match iso6185 {
+                        CarPluggedIn => {
+
+                        },
+                        CarRequestedStopPower => {}
+                        _ => {}
+                }
             }
         };
     }
@@ -156,15 +164,22 @@ fn setpwm_callback(
     args: &AfbData,
     ctx: &mut SetPwmData,
 ) -> Result<(), AfbError> {
-    let state = args.get::<&PwmState>(0)?;
-    let cycle = if args.get_count() > 1 {
-        args.get::<f64>(1)?
-    } else {
-        0.0
+    let query= args.get::<JsoncObj>(0)?;
+
+    let state= match query.get::<String>("action")?.to_uppercase().as_str() {
+        "ON" =>  PwmState::On,
+        "OFF" => PwmState::Off,
+        "FAIL" => PwmState::F,
+        _ => return afb_error!("setpwm-invalid-query", "action should be ON|OFF|FAIL")
+    };
+
+    let duty= match query.get::<f64>("duty") {
+        Ok(value) => value as f32,
+        Err(_) => 0.0
     };
 
     // this message cannot be build statically
-    let msg = mk_pwm(state, cycle as f32)?;
+    let msg = mk_pwm(&state, duty)?;
     if let Err(error) =  ctx.dev.write(&msg) {
             return afb_error!("m4-rpc-fail", "set_pwm({:?}):{}", state, error);
     };
@@ -187,25 +202,19 @@ pub(crate) fn register(api: &mut AfbApi, config: &ApiUserData) -> Result<(), Afb
             dev: handle.clone(),
             evt: event,
             count: Cell::new(0),
+            apiv4: api.get_apiv4(),
         }))
         .start()?;
 
     // set heartbeat timer
-    match AfbTimer::new(config.uid)
+    AfbTimer::new(config.uid)
         .set_period(config.tic)
         .set_decount(0)
         .set_callback(Box::new(DevTimerCtx {
             heartbeat: mk_heartbeat()?,
             dev: handle.clone(),
         }))
-        .start()
-    {
-        Err(error) => {
-            afb_log_msg!(Critical, api.get_apiv4(), &error);
-            Err(error)
-        }
-        Ok(_timer) => Ok(()),
-    }?;
+        .start()?;
 
     let subscribe = AfbVerb::new("subscribe")
         .set_callback(Box::new(SubscribeCtrl { evt: event }))
@@ -231,8 +240,10 @@ pub(crate) fn register(api: &mut AfbApi, config: &ApiUserData) -> Result<(), Afb
 
     let set_pwm = AfbVerb::new("pwm")
         .set_callback(Box::new(ctx))
-        .set_info("set_pwm (on/off)")
-        .set_usage("'ON'|'OFF'")
+        .set_info("set_pwm")
+        .set_usage("'action':'on/off','duty':0.05")
+        .set_action("['on','off']")?
+        .set_sample("'action':'on', 'duty':0.05")?
         .finalize()?;
 
     let ctx = PowerCtrl {
