@@ -57,6 +57,7 @@ struct UserPostData {
 // this callback starts from AfbSchedJob::new. If signal!=0 then callback overpass its watchdog timeout
 AfbJobRegister!(DelayCtrl, jobpost_callback, UserPostData);
 fn jobpost_callback(job: &AfbSchedJob, _signal: i32, ctx: &mut UserPostData) {
+    afb_log_msg!(Notice, None, "Callsync Lock/Unlock apiv4:{:?}", ctx.apiv4);
     match AfbSubCall::call_sync(ctx.apiv4, ctx.lock_api, ctx.lock_verb, ctx.lock) {
         Err(error) => {
             afb_log_msg!(
@@ -81,7 +82,12 @@ fn jobpost_callback(job: &AfbSchedJob, _signal: i32, ctx: &mut UserPostData) {
             // send power status to m4 formware
             let msg = mk_power(ctx.lock).expect("jobpost-fail-mk_power");
             if let Err(error) = ctx.dev.write(&msg) {
-                afb_log_msg!(Error, job, "Fail to push locl msg to m4 firmware error:{}", error);
+                afb_log_msg!(
+                    Error,
+                    job,
+                    "Fail to push locl msg to m4 firmware error:{}",
+                    error
+                );
             }
         }
     }
@@ -89,7 +95,8 @@ fn jobpost_callback(job: &AfbSchedJob, _signal: i32, ctx: &mut UserPostData) {
 
 // private function helper to post a job from eic callback
 fn jobpost(ctx: UserPostData) {
-    if let Err(error) = AfbSchedJob::new("Jobpost Lock/Unlock")
+    afb_log_msg!(Notice, None, "Posting Lock/Unlock");
+    if let Err(error) = AfbSchedJob::new("Lock/Unlock")
         .set_exec_watchdog(2) // limit exec time to 200ms;
         .set_callback(Box::new(ctx))
         .post(100)
@@ -142,8 +149,7 @@ fn async_dev_cb(_event: &AfbEvtFd, revent: u32, ctx: &mut DevAsyncCtx) {
                 ctx.evt.push(iso6185.as_str_name());
                 match iso6185 {
                     Iec61851Event::CarPluggedIn => {
-                        // Lock motor on CarPlugging
-                        // Call I2C API to lock (callsync)
+                        afb_log_msg!(Debug, None, "JobPost CarPluggedIn");
                         let context = UserPostData {
                             dev: ctx.dev.clone(),
                             evt: ctx.evt,
@@ -155,8 +161,7 @@ fn async_dev_cb(_event: &AfbEvtFd, revent: u32, ctx: &mut DevAsyncCtx) {
                         jobpost(context);
                     }
                     Iec61851Event::CarRequestedStopPower => {
-                        // Unlock motor on StopPower request
-                        // Call I2C API to lock
+                        afb_log_msg!(Debug, None, "JobPost CarRequestedStopPower");
                         let context = UserPostData {
                             dev: ctx.dev.clone(),
                             evt: ctx.evt,
