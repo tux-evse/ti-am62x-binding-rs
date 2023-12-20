@@ -3,7 +3,7 @@ syntax = "proto3";
 message Empty {};
 
 // ************************************
-//        Enum declarations 
+//        Enum declarations
 // ************************************
 enum PWMState {
     ON = 0;
@@ -12,23 +12,22 @@ enum PWMState {
 }
 
 enum SLACState {
-	DF = 0;
-    PROGRESS = 1;
-    OK = 2;
-    NOK = 3;
+UDF = 0;
+RUN = 1;
+OK = 2;
+NOK = 3;
 }
 
 // ************************************
-//        Messages declarations 
+//        Messages declarations
 // ************************************
 message SetPWM {
 	PWMState state = 1;
-	float duty_cycle = 2;	
+	float duty_cycle = 2;
 }
 
-message GetSLAC {
-	SLACState state = 1; 
-	float timer = 2;
+message SetSLAC {
+SLACState state = 1;
 }
 
 message CpuHeartbeat {
@@ -43,7 +42,7 @@ message HighToLow {
         Empty enable = 3;
         Empty disable = 4;
         CpuHeartbeat heartbeat = 5;
-        GetSLAC get_slac = 6;
+        SetSLAC set_slac = 6;
     }
 }
 

@@ -15,12 +15,10 @@ use afbv4::prelude::*;
 
 // import serde/json converters
 AfbDataConverter!(pwm_state_type, PwmState);
-AfbDataConverter!(pwm_set_type, SetPwm);
 
 pub fn rpmsg_register() -> Result<(), AfbError> {
    // register imported serde type
     pwm_state_type::register()?;
-    pwm_set_type::register()?;
 
 
     Ok(())

@@ -27,6 +27,7 @@ pub(crate) struct ApiUserData {
     pub uid: &'static str,
     pub cdev: Option<&'static str>,
     pub eptname: &'static str,
+    pub api_gpio: &'static str,
     pub rport: i32,
     pub tic: u32,
 }
@@ -103,6 +104,13 @@ pub fn binding_init(rootv4: AfbApiV4, jconf: JsoncObj) -> Result<&'static AfbApi
         1000
     };
 
+    let api_gpio = if let Ok(value) = jconf.get::<String>("api_gpio") {
+        to_static_str(value)
+    } else {
+        return afb_error!("amx62x-binding-config", "mandatory 'api_gpio' missing from binding json config")
+    };
+
+
     let permission = if let Ok(value) = jconf.get::<String>("permission") {
         AfbPermission::new(to_static_str(value))
     } else {
@@ -115,6 +123,7 @@ pub fn binding_init(rootv4: AfbApiV4, jconf: JsoncObj) -> Result<&'static AfbApi
         rport,
         eptname,
         tic,
+        api_gpio,
     };
 
     // initialization of ti rpm_char_lib should be done once at initialization
@@ -129,6 +138,7 @@ pub fn binding_init(rootv4: AfbApiV4, jconf: JsoncObj) -> Result<&'static AfbApi
     register(api, &config)?;
 
     // finalize api
+    api.require_api(api_gpio);
     Ok(api.finalize()?)
 }
 

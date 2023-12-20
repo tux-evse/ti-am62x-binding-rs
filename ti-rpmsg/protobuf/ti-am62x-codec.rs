@@ -28,12 +28,12 @@ mod pbuf {
 }
 
 // make public internal Iec61851Event
-pub type Iso6185Msg = pbuf::Iec61851Event;
+pub type Iec61851Event = pbuf::Iec61851Event;
 pub type PwmState= pbuf::PwmState;
-pub type SetPwm= pbuf::SetPwm;
+pub type SlacState= pbuf::SlacState;
 
 pub enum EventMsg {
-    Msg(Iso6185Msg),
+    Evt(Iec61851Event),
     Heartbeat(),
     Err(AfbError),
 }
@@ -113,6 +113,18 @@ pub fn mk_pwm(state: &PwmState, duty_cycle: f32) -> Result<Vec<u8>, AfbError> {
     }
 }
 
+pub fn mk_slac(state: &SlacState) -> Result<Vec<u8>, AfbError> {
+
+    let msg = pbuf::HighToLow {
+        message: Some(pbuf::high_to_low::Message::SetSlac(pbuf::SetSlac {state: *state as i32})),
+    };
+    let mut buffer = Vec::with_capacity(msg.encoded_len());
+    match msg.encode(&mut buffer) {
+        Ok(()) => Ok(buffer),
+        Err(error) => afb_error!("encoding-setpwm-fail", "{}", error),
+    }
+}
+
 // decode message from encoded buffer
 pub fn msg_uncode(buffer: &[u8]) -> EventMsg {
     match pbuf::LowToHigh::decode(buffer) {
@@ -121,8 +133,8 @@ pub fn msg_uncode(buffer: &[u8]) -> EventMsg {
             None => EventMsg::Err(AfbError::new("decoding-buffer-empty", "no data to decode")),
             Some(msg) => match msg {
                 pbuf::low_to_high::Message::Heartbeat(_) => EventMsg::Heartbeat(),
-                pbuf::low_to_high::Message::Event(value) => match Iso6185Msg::try_from(value) {
-                    Ok(iec) => EventMsg::Msg(iec),
+                pbuf::low_to_high::Message::Event(value) => match Iec61851Event::try_from(value) {
+                    Ok(iec) => EventMsg::Evt(iec),
                     Err(error) => EventMsg::Err(AfbError::new(
                         "decoding-ioc6185-error",
                         format!("unknown iec6185 value={} error={}", value, error),

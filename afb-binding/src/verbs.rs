@@ -45,12 +45,69 @@ fn timer_callback(timer: &AfbTimer, _decount: u32, ctx: &mut DevTimerCtx) {
     };
 }
 
+struct UserPostData {
+    evt: &'static AfbEvent,
+    apiv4: AfbApiV4,
+    api_gpio: &'static str,
+    lock: bool,
+    dev: Rc<TiRpmsg>,
+}
+
+// this callback starts from AfbSchedJob::new. If signal!=0 then callback overpass its watchdog timeout
+AfbJobRegister!(DelayCtrl, jobpost_callback, UserPostData);
+fn jobpost_callback(job: &AfbSchedJob, _signal: i32, ctx: &mut UserPostData) {
+    match AfbSubCall::call_sync(ctx.apiv4, ctx.api_gpio, "lock", ctx.lock) {
+        Err(error) => {
+            afb_log_msg!(
+                Error,
+                job,
+                "jobpost:{} callsync api:{}/lock error:{}",
+                job.get_jobid(),
+                ctx.api_gpio,
+                error
+            );
+        }
+        Ok(_args) => {
+            // push evt to listening bindings
+            let json = JsoncObj::new();
+            json.add("action", "lock").expect("jsonc fail added action");
+            json.add("status", ctx.lock as u32)
+                .expect("jsonc fail adding status");
+            afb_log_msg!(Info, job, "jobpost callback Lock= {}", &json);
+            ctx.evt.push(json);
+
+            // send power status to m4 formware
+            let msg = mk_power(ctx.lock).expect("jobpost-fail-mk_power");
+            if let Err(error) = ctx.dev.write(&msg) {
+                afb_log_msg!(Error, job, "Fail to push locl msg to m4 firmware error:{}", error);
+            }
+        }
+    }
+}
+
+// private function helper to post a job from eic callback
+fn jobpost(ctx: UserPostData) {
+    if let Err(error) = AfbSchedJob::new("Jobpost Lock/Unlock")
+        .set_exec_watchdog(2) // limit exec time to 200ms;
+        .set_callback(Box::new(ctx))
+        .post(100)
+    {
+        afb_log_msg!(
+            Error,
+            None,
+            "Posting Lock/Unlock Job Failed error:{}",
+            error
+        );
+    }
+}
+
 // on event ctx and callback
 struct DevAsyncCtx {
     count: Cell<u32>,
     dev: Rc<TiRpmsg>,
     evt: &'static AfbEvent,
     apiv4: AfbApiV4,
+    api_gpio: &'static str,
 }
 AfbEvtFdRegister!(DecAsyncCtrl, async_dev_cb, DevAsyncCtx);
 fn async_dev_cb(_event: &AfbEvtFd, revent: u32, ctx: &mut DevAsyncCtx) {
@@ -78,15 +135,47 @@ fn async_dev_cb(_event: &AfbEvtFd, revent: u32, ctx: &mut DevAsyncCtx) {
                 afb_log_msg!(Debug, None, "Device heartbeat count={}", count);
             }
 
-            EventMsg::Msg(iso6185) => {
+            EventMsg::Evt(iso6185) => {
                 ctx.evt.push(iso6185.as_str_name());
-                // match iso6185 {
-                //         CarPluggedIn => {
+                match iso6185 {
+                    Iec61851Event::CarPluggedIn => {
+                        // Lock motor on CarPlugging
+                        // Call I2C API to lock (callsync)
+                        let context = UserPostData {
+                            dev: ctx.dev.clone(),
+                            evt: ctx.evt,
+                            apiv4: ctx.apiv4,
+                            api_gpio: ctx.api_gpio, // "i2c/gpio",
+                            lock: true,
+                        };
+                        jobpost(context);
 
-                //         },
-                //         CarRequestedStopPower => {}
-                //         _ => {}
-                // }
+                        // Delay 100ms jobpost
+
+                        // Read the lock status
+
+                        // Event/Rpmsg Lock OK/NOK
+                    }
+                    Iec61851Event::CarRequestedStopPower => {
+                        // Unlock motor on StopPower request
+                        // Call I2C API to lock
+                        let context = UserPostData {
+                            dev: ctx.dev.clone(),
+                            evt: ctx.evt,
+                            apiv4: ctx.apiv4,
+                            api_gpio: ctx.api_gpio, // "i2c/gpio",
+                            lock: false,
+                        };
+                        jobpost(context);
+
+                        // Delay 100ms jobpost
+
+                        // Read the Unlock status
+
+                        // Event/Rpmsg Unlock OK/NOK
+                    }
+                    _ => {} // others do nothing
+                }
             }
         };
     }
@@ -125,8 +214,8 @@ fn enable_callback(
     let enable = args.get::<bool>(0)?;
 
     let msg = if enable { &ctx.enable } else { &ctx.disable };
-    if let Err(error) =  ctx.dev.write(msg) {
-            return afb_error!("m4-rpc-fail", "enable({}):{}", enable, error);
+    if let Err(error) = ctx.dev.write(msg) {
+        return afb_error!("m4-rpc-fail", "enable({}):{}", enable, error);
     };
 
     request.reply(AFB_NO_DATA, 0);
@@ -147,8 +236,8 @@ fn power_callback(
     let enable = args.get::<bool>(0)?;
 
     let msg = if enable { &ctx.enable } else { &ctx.disable };
-    if let Err(error) =  ctx.dev.write(msg) {
-            return afb_error!("m4-rpc-fail", "power({}):{}", enable, error);
+    if let Err(error) = ctx.dev.write(msg) {
+        return afb_error!("m4-rpc-fail", "power({}):{}", enable, error);
     };
 
     request.reply(AFB_NO_DATA, 0);
@@ -164,24 +253,51 @@ fn setpwm_callback(
     args: &AfbData,
     ctx: &mut SetPwmData,
 ) -> Result<(), AfbError> {
-    let query= args.get::<JsoncObj>(0)?;
+    let query = args.get::<JsoncObj>(0)?;
 
-    let state= match query.get::<String>("action")?.to_uppercase().as_str() {
-        "ON" =>  PwmState::On,
+    let state = match query.get::<String>("action")?.to_uppercase().as_str() {
+        "ON" => PwmState::On,
         "OFF" => PwmState::Off,
         "FAIL" => PwmState::F,
-        _ => return afb_error!("setpwm-invalid-query", "action should be ON|OFF|FAIL")
+        _ => return afb_error!("setpwm-invalid-query", "action should be ON|OFF|FAIL"),
     };
 
-    let duty= match query.get::<f64>("duty") {
+    let duty = match query.get::<f64>("duty") {
         Ok(value) => value as f32,
-        Err(_) => 0.0
+        Err(_) => 0.0,
     };
 
     // this message cannot be build statically
     let msg = mk_pwm(&state, duty)?;
-    if let Err(error) =  ctx.dev.write(&msg) {
-            return afb_error!("m4-rpc-fail", "set_pwm({:?}):{}", state, error);
+    if let Err(error) = ctx.dev.write(&msg) {
+        return afb_error!("m4-rpc-fail", "set_pwm({:?}):{}", state, error);
+    };
+    request.reply(AFB_NO_DATA, 0);
+    Ok(())
+}
+struct SetSlacData {
+    dev: Rc<TiRpmsg>,
+}
+AfbVerbRegister!(SetSlacCtrl, setslac_callback, SetSlacData);
+fn setslac_callback(
+    request: &AfbRequest,
+    args: &AfbData,
+    ctx: &mut SetSlacData,
+) -> Result<(), AfbError> {
+    let query = args.get::<JsoncObj>(0)?;
+
+    let state = match query.get::<String>("status")?.to_uppercase().as_str() {
+        "UDF" => SlacState::Udf,
+        "RUN" => SlacState::Run,
+        "OK" => SlacState::Ok,
+        "NOK" => SlacState::Nok,
+        _ => return afb_error!("setslac-invalid-query", "action should be ON|OFF|FAIL"),
+    };
+
+    // this message cannot be build statically
+    let msg = mk_slac(&state)?;
+    if let Err(error) = ctx.dev.write(&msg) {
+        return afb_error!("m4-rpc-fail", "set_pwm({:?}):{}", state, error);
     };
     request.reply(AFB_NO_DATA, 0);
     Ok(())
@@ -203,6 +319,7 @@ pub(crate) fn register(api: &mut AfbApi, config: &ApiUserData) -> Result<(), Afb
             evt: event,
             count: Cell::new(0),
             apiv4: api.get_apiv4(),
+            api_gpio: config.api_gpio,
         }))
         .start()?;
 
@@ -246,6 +363,19 @@ pub(crate) fn register(api: &mut AfbApi, config: &ApiUserData) -> Result<(), Afb
         .set_sample("{'action':'on', 'duty':0.05}")?
         .finalize()?;
 
+    let ctx = SetSlacCtrl {
+        dev: handle.clone(),
+    };
+    let slac_status = AfbVerb::new("slac")
+        .set_callback(Box::new(ctx))
+        .set_info("set slac status")
+        .set_usage("'status':'udf/run/ok/nok'")
+        .set_sample("{'status':'udf'}")?
+        .set_sample("{'status':'run'}")?
+        .set_sample("{'status':'ok'}")?
+        .set_sample("{'status':'nok'}")?
+        .finalize()?;
+
     let ctx = PowerCtrl {
         dev: handle.clone(),
         enable: mk_power(true)?,
@@ -262,11 +392,12 @@ pub(crate) fn register(api: &mut AfbApi, config: &ApiUserData) -> Result<(), Afb
     api.add_verb(set_pwm);
     api.add_verb(dev_enable);
     api.add_verb(allow_power);
+    api.add_verb(slac_status);
 
     // init m4 firmware (set pwm-off and enable eic6185 event)
     for msg in [mk_pwm(&PwmState::Off, 0.0)?, mk_enable()?] {
         if let Err(error) = handle.write(&msg) {
-            return afb_error!("m4-init-fail", "firmware refused command error={}", error)
+            return afb_error!("m4-init-fail", "firmware refused command error={}", error);
         }
     }
 

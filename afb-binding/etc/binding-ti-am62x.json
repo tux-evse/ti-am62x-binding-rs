@@ -1,17 +1,90 @@
 {
-  "name": "afb-ti-am62x",
-  "no-ldpaths": true,
-  "alias": ["/devtools:/usr/share/afb-ui-devtools/binder"],
-
-  "binding": [
-    {
-        "uid": "ti-am62x",
-        "api": "tiam62x",
-        "info": "Ti MCU(am62x) firmware rpmsg/openamp API",
-        "path": "/usr/redpesk/ti-am62x-binding-rs/lib/libafb_tiam62x.so",
-        "eptname": "rpmsg_tuxevse",
-        "rport": 14,
-        "tic": 5000
-    }
-  ]
+    "name": "afb-ti-am62x",
+    "no-ldpaths": true,
+    "alias": [
+        "/devtools:/usr/share/afb-ui-devtools/binder"
+    ],
+    "binding": [
+        {
+            "path": "/usr/redpesk/ti-am62x-binding-rs/lib/libafb_tiam62x.so",
+            "uid": "ti-am62x",
+            "api": "tiam62x",
+            "info": "Ti MCU(am62x) firmware rpmsg/openamp API",
+            "eptname": "rpmsg_tuxevse",
+            "rport": 14,
+            "tic": 5000,
+            "api_gpio": "/i2c/gpio"
+        },
+        {
+            "path": "/usr/redpesk/i2c-binding-rs/lib/libafb_i2c.so",
+            "uid": "i2c-bus",
+            "api": "i2c",
+            "info": "i2c set/get api",
+            "i2cbus": "/dev/i2c-0",
+            "permission": "acl:i2c:0",
+            "devices": [
+                {
+                    "uid": "gpio-multiplexer",
+                    "prefix": "gpio",
+                    "info": "interface to power GPIO multiplexer",
+                    "addr": "0x20",
+                    "size": 1,
+                    "init": [
+                        {
+                            "reg": "0x02",
+                            "value": "0x04"
+                        },
+                        {
+                            "reg": "0x06",
+                            "value": "0x83"
+                        }
+                    ],
+                    "cmds": [
+                        {
+                            "uid": "lock-motor",
+                            "name": "lock",
+                            "info": "Lock motor register",
+                            "permission": "acl:ic2:lock-motor",
+                            "delay": 300,
+                            "register": "0x02",
+                            "presets": [
+                                {
+                                    "action": "on",
+                                    "values": [
+                                        "0x04",
+                                        "0x24",
+                                        "0x04"
+                                    ]
+                                },
+                                {
+                                    "action": "off",
+                                    "values": [
+                                        "0x04",
+                                        "0x14",
+                                        "0x04"
+                                    ]
+                                }
+                            ]
+                        },
+                        {
+                            "uid": "lock-status",
+                            "name": "status",
+                            "info": "Lock status register",
+                            "size": 1,
+                            "register": "0x00",
+                            "presets": []
+                        },
+                        {
+                            "uid": "relay-status",
+                            "name": "relay",
+                            "info": "Relay status register",
+                            "size": 2,
+                            "register": "0x01",
+                            "presets": []
+                        }
+                    ]
+                }
+            ]
+        }
+    ]
 }
