@@ -117,8 +117,6 @@ pub fn binding_init(rootv4: AfbApiV4, jconf: JsoncObj) -> Result<&'static AfbApi
         return afb_error!("amx62x-binding-config", "mandatory 'lock_verb' missing from binding json config")
     };
 
-
-
     let permission = if let Ok(value) = jconf.get::<String>("permission") {
         AfbPermission::new(to_static_str(value))
     } else {
@@ -144,15 +142,19 @@ pub fn binding_init(rootv4: AfbApiV4, jconf: JsoncObj) -> Result<&'static AfbApi
         .set_permission(permission);
 
     // we need apiv4 to feed timer
-    println! ("**** rootapi={:?} ****", rootv4);
     api.set_apiv4(rootv4);
+    println! ("**** root apiv4={:?}={:?} ****", rootv4, api.get_apiv4());
 
     // register verbs and events
     register(api, &config)?;
 
     // finalize api
     api.require_api(lock_api);
-    Ok(api.finalize()?)
+    let api= api.finalize()?;
+
+    println! ("**** new apiv4={:?} ****", api.get_apiv4());
+
+    Ok(api)
 }
 
 // register binding within afbv4

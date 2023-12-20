@@ -95,7 +95,7 @@ fn jobpost_callback(job: &AfbSchedJob, _signal: i32, ctx: &mut UserPostData) {
 
 // private function helper to post a job from eic callback
 fn jobpost(ctx: UserPostData) {
-    afb_log_msg!(Notice, None, "Posting Lock/Unlock");
+    afb_log_msg!(Notice, None, "Posting Lock/Unlock  rootv4:{:?}", ctx.apiv4);
     if let Err(error) = AfbSchedJob::new("Lock/Unlock")
         .set_exec_watchdog(2) // limit exec time to 200ms;
         .set_callback(Box::new(ctx))
@@ -149,7 +149,7 @@ fn async_dev_cb(_event: &AfbEvtFd, revent: u32, ctx: &mut DevAsyncCtx) {
                 ctx.evt.push(iso6185.as_str_name());
                 match iso6185 {
                     Iec61851Event::CarPluggedIn => {
-                        afb_log_msg!(Debug, None, "JobPost CarPluggedIn");
+                        afb_log_msg!(Debug, None, "JobPost CarPluggedIn rootv4:{:?}", ctx.apiv4);
                         let context = UserPostData {
                             dev: ctx.dev.clone(),
                             evt: ctx.evt,
@@ -309,6 +309,9 @@ pub(crate) fn register(api: &mut AfbApi, config: &ApiUserData) -> Result<(), Afb
 
     // create event and store it within callback context
     let event = AfbEvent::new(config.uid);
+
+    println! ("**** register apiv4={:?} ****", api.get_apiv4());
+
 
     // register dev handler within listening event loop
     AfbEvtFd::new(config.uid)
