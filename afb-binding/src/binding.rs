@@ -37,10 +37,17 @@ fn to_static_str(value: String) -> &'static str {
     Box::leak(value.into_boxed_str())
 }
 
-impl AfbApiControls for ApiUserData {
-    fn config(&mut self, api: &AfbApi, jconf: JsoncObj) -> Result<(), AfbError> {
-        afb_log_msg!(Debug, api, "api={} config={}", api.get_uid(), jconf);
+struct ApiCtxData{}
 
+impl AfbApiControls for ApiCtxData {
+    fn config(&mut self, api: &AfbApi, jconf: JsoncObj) -> Result<(), AfbError> {
+        afb_log_msg!(Debug, None, "config apiv4={:?}", api.get_apiv4());
+        afb_log_msg!(Debug, None, "api={} config={}", api.get_uid(), jconf);
+        Ok(())
+    }
+
+    fn start(&mut self, api: &AfbApi) -> Result<(), AfbError> {
+        afb_log_msg!(Debug, None, "start apiv4={:?}", api.get_apiv4());
         Ok(())
     }
 
@@ -139,7 +146,8 @@ pub fn binding_init(rootv4: AfbApiV4, jconf: JsoncObj) -> Result<&'static AfbApi
     // create a new api
     let api = AfbApi::new(apiname)
         .set_info(info)
-        .set_permission(permission);
+        .set_permission(permission)
+        .set_callback(Box::new(ApiCtxData{}));
 
     // we need apiv4 to feed timer
     api.set_apiv4(rootv4);
