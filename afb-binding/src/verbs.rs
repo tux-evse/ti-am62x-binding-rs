@@ -83,24 +83,36 @@ fn jobpost_callback(job: &AfbSchedJob, _signal: i32, ctx: &mut UserPostData) {
                 error
             );
         }
-        Ok(_args) => {
-            // push evt to listening bindings
-            let json = JsoncObj::new();
-            json.add("action", "lock").expect("jsonc fail added action");
-            json.add("status", ctx.lock as u32)
-                .expect("jsonc fail status");
-            afb_log_msg!(Info, job, "jobpost callback Lock= {}", &json);
-            ctx.evt.push(json);
-
-            // send power status to m4 formware
-            let msg = mk_power(ctx.lock).expect("jobpost-fail-mk_power");
-            if let Err(error) = ctx.dev.write(&msg) {
+        Ok(response) => {
+            if response.get_status() < 0 {
                 afb_log_msg!(
                     Error,
                     job,
-                    "Fail to push locl msg to m4 firmware error:{}",
-                    error
+                    "jobpost:{} callsync api:{}{} error:{}",
+                    job.get_jobid(),
+                    ctx.lock_api,
+                    ctx.lock_verb,
+                    afb_error_info(response.get_status())
                 );
+            } else {
+                // push evt to listening bindings
+                let json = JsoncObj::new();
+                json.add("action", "lock").expect("jsonc fail added action");
+                json.add("status", ctx.lock as u32)
+                    .expect("jsonc fail status");
+                afb_log_msg!(Info, job, "jobpost callback Lock= {}", &json);
+                ctx.evt.push(json);
+
+                // send power status to m4 formware
+                let msg = mk_power(ctx.lock).expect("jobpost-fail-mk_power");
+                if let Err(error) = ctx.dev.write(&msg) {
+                    afb_log_msg!(
+                        Error,
+                        job,
+                        "Fail to push locl msg to m4 firmware error:{}",
+                        error
+                    );
+                };
             }
         }
     }
