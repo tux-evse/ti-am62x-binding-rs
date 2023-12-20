@@ -143,6 +143,9 @@ pub fn binding_init(rootv4: AfbApiV4, jconf: JsoncObj) -> Result<&'static AfbApi
         .set_info(info)
         .set_permission(permission);
 
+    // we need apiv4 to feed timer
+    api.set_apiv4(rootv4);
+
     // register verbs and events
     register(api, &config)?;
 
