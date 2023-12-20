@@ -48,7 +48,8 @@ fn timer_callback(timer: &AfbTimer, _decount: u32, ctx: &mut DevTimerCtx) {
 struct UserPostData {
     evt: &'static AfbEvent,
     apiv4: AfbApiV4,
-    api_gpio: &'static str,
+    lock_api: &'static str,
+    lock_verb: &'static str,
     lock: bool,
     dev: Rc<TiRpmsg>,
 }
@@ -56,14 +57,15 @@ struct UserPostData {
 // this callback starts from AfbSchedJob::new. If signal!=0 then callback overpass its watchdog timeout
 AfbJobRegister!(DelayCtrl, jobpost_callback, UserPostData);
 fn jobpost_callback(job: &AfbSchedJob, _signal: i32, ctx: &mut UserPostData) {
-    match AfbSubCall::call_sync(ctx.apiv4, ctx.api_gpio, "lock", ctx.lock) {
+    match AfbSubCall::call_sync(ctx.apiv4, ctx.lock_api, ctx.lock_verb, ctx.lock) {
         Err(error) => {
             afb_log_msg!(
                 Error,
                 job,
-                "jobpost:{} callsync api:{}/lock error:{}",
+                "jobpost:{} callsync api:{}{} error:{}",
                 job.get_jobid(),
-                ctx.api_gpio,
+                ctx.lock_api,
+                ctx.lock_verb,
                 error
             );
         }
@@ -107,7 +109,8 @@ struct DevAsyncCtx {
     dev: Rc<TiRpmsg>,
     evt: &'static AfbEvent,
     apiv4: AfbApiV4,
-    api_gpio: &'static str,
+    lock_api: &'static str,
+    lock_verb: &'static str,
 }
 AfbEvtFdRegister!(DecAsyncCtrl, async_dev_cb, DevAsyncCtx);
 fn async_dev_cb(_event: &AfbEvtFd, revent: u32, ctx: &mut DevAsyncCtx) {
@@ -145,16 +148,11 @@ fn async_dev_cb(_event: &AfbEvtFd, revent: u32, ctx: &mut DevAsyncCtx) {
                             dev: ctx.dev.clone(),
                             evt: ctx.evt,
                             apiv4: ctx.apiv4,
-                            api_gpio: ctx.api_gpio, // "i2c/gpio",
+                            lock_api: ctx.lock_api,
+                            lock_verb: ctx.lock_verb,
                             lock: true,
                         };
                         jobpost(context);
-
-                        // Delay 100ms jobpost
-
-                        // Read the lock status
-
-                        // Event/Rpmsg Lock OK/NOK
                     }
                     Iec61851Event::CarRequestedStopPower => {
                         // Unlock motor on StopPower request
@@ -163,16 +161,11 @@ fn async_dev_cb(_event: &AfbEvtFd, revent: u32, ctx: &mut DevAsyncCtx) {
                             dev: ctx.dev.clone(),
                             evt: ctx.evt,
                             apiv4: ctx.apiv4,
-                            api_gpio: ctx.api_gpio, // "i2c/gpio",
+                            lock_api: ctx.lock_api,
+                            lock_verb: ctx.lock_verb,
                             lock: false,
                         };
                         jobpost(context);
-
-                        // Delay 100ms jobpost
-
-                        // Read the Unlock status
-
-                        // Event/Rpmsg Unlock OK/NOK
                     }
                     _ => {} // others do nothing
                 }
@@ -319,7 +312,8 @@ pub(crate) fn register(api: &mut AfbApi, config: &ApiUserData) -> Result<(), Afb
             evt: event,
             count: Cell::new(0),
             apiv4: api.get_apiv4(),
-            api_gpio: config.api_gpio,
+            lock_api: config.lock_api,
+            lock_verb: config.lock_verb,
         }))
         .start()?;
 

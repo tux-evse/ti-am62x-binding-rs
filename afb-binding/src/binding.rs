@@ -27,7 +27,8 @@ pub(crate) struct ApiUserData {
     pub uid: &'static str,
     pub cdev: Option<&'static str>,
     pub eptname: &'static str,
-    pub api_gpio: &'static str,
+    pub lock_api: &'static str,
+    pub lock_verb: &'static str,
     pub rport: i32,
     pub tic: u32,
 }
@@ -104,11 +105,18 @@ pub fn binding_init(rootv4: AfbApiV4, jconf: JsoncObj) -> Result<&'static AfbApi
         1000
     };
 
-    let api_gpio = if let Ok(value) = jconf.get::<String>("api_gpio") {
+    let lock_api = if let Ok(value) = jconf.get::<String>("lock_api") {
         to_static_str(value)
     } else {
-        return afb_error!("amx62x-binding-config", "mandatory 'api_gpio' missing from binding json config")
+        return afb_error!("amx62x-binding-config", "mandatory 'lock_api' missing from binding json config")
     };
+
+    let lock_verb = if let Ok(value) = jconf.get::<String>("lock_verb") {
+        to_static_str(value)
+    } else {
+        return afb_error!("amx62x-binding-config", "mandatory 'lock_verb' missing from binding json config")
+    };
+
 
 
     let permission = if let Ok(value) = jconf.get::<String>("permission") {
@@ -123,7 +131,8 @@ pub fn binding_init(rootv4: AfbApiV4, jconf: JsoncObj) -> Result<&'static AfbApi
         rport,
         eptname,
         tic,
-        api_gpio,
+        lock_api,
+        lock_verb,
     };
 
     // initialization of ti rpm_char_lib should be done once at initialization
@@ -138,7 +147,7 @@ pub fn binding_init(rootv4: AfbApiV4, jconf: JsoncObj) -> Result<&'static AfbApi
     register(api, &config)?;
 
     // finalize api
-    api.require_api(api_gpio);
+    api.require_api(lock_api);
     Ok(api.finalize()?)
 }
 

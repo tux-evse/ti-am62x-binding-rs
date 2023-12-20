@@ -13,7 +13,8 @@
             "eptname": "rpmsg_tuxevse",
             "rport": 14,
             "tic": 5000,
-            "api_gpio": "/i2c/gpio"
+            "lock_api": "i2c",
+            "lock_verb": "/gpio/lock",
         },
         {
             "path": "/usr/redpesk/i2c-binding-rs/lib/libafb_i2c.so",
