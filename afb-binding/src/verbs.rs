@@ -167,7 +167,9 @@ fn async_dev_cb(_event: &AfbEvtFd, revent: u32, ctx: &mut DevAsyncCtx) {
                         };
                         jobpost(context);
                     }
-                    _ => {} // others do nothing
+                    _ => {
+                        afb_log_msg!(Debug, None, "No JobPost evt:{}", iso6185.as_str_name());
+                    } // others do nothing
                 }
             }
         };
