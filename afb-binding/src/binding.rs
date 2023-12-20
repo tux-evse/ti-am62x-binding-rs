@@ -29,6 +29,7 @@ pub(crate) struct ApiUserData {
     pub eptname: &'static str,
     pub rport: i32,
     pub tic: u32,
+    pub api_gpio: &'static str,
 }
 
 fn to_static_str(value: String) -> &'static str {
@@ -89,6 +90,12 @@ pub fn binding_init(rootv4: AfbApiV4, jconf: JsoncObj) -> Result<&'static AfbApi
         "tux-evse-rmsg"
     };
 
+    let api_gpio = if let Ok(value) = jconf.get::<String>("api_gpio") {
+        to_static_str(value)
+    } else {
+        "/i2c/gpio"
+    };
+
     let rport = if let Ok(value) = jconf.get::<i32>("ept_num") {
         value
     } else {
@@ -113,6 +120,7 @@ pub fn binding_init(rootv4: AfbApiV4, jconf: JsoncObj) -> Result<&'static AfbApi
         rport,
         eptname,
         tic,
+        api_gpio,
     };
 
     // initialization of ti rpm_char_lib should be done once at initialization
@@ -122,6 +130,9 @@ pub fn binding_init(rootv4: AfbApiV4, jconf: JsoncObj) -> Result<&'static AfbApi
     let api = AfbApi::new(apiname)
         .set_info(info)
         .set_permission(permission);
+
+    // update root api because we need it within eic event handler (to be improve, bad syntax)
+    api.set_apiv4(rootv4);
 
     // register verbs and events
     register(api, &config)?;

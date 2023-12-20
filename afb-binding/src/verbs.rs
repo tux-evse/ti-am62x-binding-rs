@@ -18,8 +18,8 @@
  *  following code is a RUST an API version of Pionix ti-am62x-evse-sdk user space module
  *  interfacing through kernel RPMSG the firmware running in the MCU/M4 cortex.
  */
-use std::mem::MaybeUninit;
 use std::cell::Cell;
+use std::mem::MaybeUninit;
 use std::rc::Rc;
 
 use crate::prelude::*;
@@ -45,28 +45,91 @@ fn timer_callback(timer: &AfbTimer, _decount: u32, ctx: &mut DevTimerCtx) {
     };
 }
 
+// FCAM: Jobpost used to manage the delay after Lock/Unlock command
+struct UserPostData {
+    event: AfbEvent,
+    apiv4: AfbApiv4,
+    api_gpio: &'static str,
+    lock: bool,
+}
+// this callback starts from AfbSchedJob::new. If signal!=0 then callback overpass its watchdog timeout
+AfbJobRegister!(DelayCtrl, jobpost_callback, UserPostData);
+fn jobpost_callback(job: &AfbSchedJob, signal: i32, userdata: &mut UserPostData) {
+    afb_log_msg!(
+        Info,
+        job,
+        "{}: jobpost callback Lock-Unlock_signal={}",
+        job.get_uid(),
+        signal
+    );
+    match AfbSubCall::call_sync(userdata.apiv4, userdata.api_gpio, "lock", userdata.lock) {
+        Err(error)=> { 
+            afb_log_msg!(
+                Error,
+                job,
+                " jobpost callsync api: {}/lock fail",
+                userdata.api_gpio,
+            );
+        },
+        Ok(args)=> {
+            let json=JsoncObj::new(); 
+            json.add("action", "lock");
+            json.add("status", userdata.lock);
+            userdata.event.push(json);
+
+            //
+            let msg=mk_power(userdata.lock).unwrap();
+            ctx.dev.write(msg).unwrap();
+
+        },
+}
+
+// post a job at 100ms with a clone of the received json query
+struct UserPostVerb {
+    event: &'static AfbEvent,
+}
+
+fn jobpost(context: UserPostData) {
+    if let Err(error) = AfbSchedJob::new("Jobpost Lock/Unlock ")
+        .set_exec_watchdog(2) // limit exec time to 200ms;
+        .set_callback(Box::new(context))
+        .post(100)
+    {
+        afb_log_msg!(
+            Info,
+            None,
+            "Lock/Unlock Job Failed uid:{} jobid={}",
+            job.get_uid(),
+            job.get_jobid()
+        );
+    }
+}
+
 // on event ctx and callback
 struct DevAsyncCtx {
     count: Cell<u32>,
     dev: Rc<TiRpmsg>,
     evt: &'static AfbEvent,
+    api_gpio: &'static str,
+    apiv4: AfbApiV4,
 }
+
 AfbEvtFdRegister!(DecAsyncCtrl, async_dev_cb, DevAsyncCtx);
 fn async_dev_cb(_event: &AfbEvtFd, revent: u32, ctx: &mut DevAsyncCtx) {
     if revent == AfbEvtFdPoll::IN.bits() {
-
         #[allow(invalid_value)]
-        let mut buffer: [u8; PROTOBUF_MAX_CAPACITY as usize] = unsafe { MaybeUninit::uninit().assume_init() };
-        let len= match ctx.dev.read(&mut buffer) {
-            Ok(len) => {len},
+        let mut buffer: [u8; PROTOBUF_MAX_CAPACITY as usize] =
+            unsafe { MaybeUninit::uninit().assume_init() };
+        let len = match ctx.dev.read(&mut buffer) {
+            Ok(len) => len,
             Err(error) => {
                 afb_log_msg!(Critical, None, "{}", error);
                 return;
             }
         };
 
-        let data= &buffer[0..len];
-        afb_log_msg!(Debug, None,format!("rpmsg data={:X?}(hexa)", data));
+        let data = &buffer[0..len];
+        afb_log_msg!(Debug, None, format!("rpmsg data={:X?}(hexa)", data));
 
         match msg_uncode(data) {
             EventMsg::Err(error) => {
@@ -81,6 +144,44 @@ fn async_dev_cb(_event: &AfbEvtFd, revent: u32, ctx: &mut DevAsyncCtx) {
 
             EventMsg::Msg(iso6185) => {
                 ctx.evt.push(iso6185.as_str_name());
+
+                match iso6185 {
+                    CarPluggedIn => {
+                        // Lock motor on CarPlugging
+                        // Call I2C API to lock (callsync)
+                        let context = UserPostData {
+                            event: ctx.evt,
+                            apiv4: ctx.apiv4,
+                            api_gpio: ctx.api_gpio, // "i2c/gpio",
+                            lock: true,
+                        };
+                        jobpost(context);
+
+                        // Delay 100ms jobpost
+
+                        // Read the lock status
+
+                        // Event/Rpmsg Lock OK/NOK
+                    }
+                    CarRequestedStopPower => {
+                        // Unlock motor on StopPower request
+                        // Call I2C API to lock
+                        let context = UserPostData {
+                            event: ctx.evt,
+                            apiv4: ctx.apiv4,
+                            api_gpio: ctx.api_gpio, // "i2c/gpio",
+                            lock: false,
+                        };
+                        jobpost(context);
+
+                        // Delay 100ms jobpost
+
+                        // Read the Unlock status
+
+                        // Event/Rpmsg Unlock OK/NOK
+                    }
+                    _ => {} // others do nothing
+                }
             }
         };
     }
@@ -205,6 +306,8 @@ pub(crate) fn register(api: &mut AfbApi, config: &ApiUserData) -> Result<(), Afb
             dev: handle.clone(),
             evt: event,
             count: Cell::new(0),
+            apiv4: api.get_apiv4(),
+            api_gpio: config.api_gpio,
         }))
         .start()?;
 
