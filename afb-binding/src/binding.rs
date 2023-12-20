@@ -40,13 +40,9 @@ fn to_static_str(value: String) -> &'static str {
 struct ApiCtxData{}
 
 impl AfbApiControls for ApiCtxData {
-    fn config(&mut self, api: &AfbApi, jconf: JsoncObj) -> Result<(), AfbError> {
-        afb_log_msg!(Debug, None, "config apiv4={:?}", api.get_apiv4());
-        afb_log_msg!(Debug, None, "api={} config={}", api.get_uid(), jconf);
-        Ok(())
-    }
 
     fn start(&mut self, api: &AfbApi) -> Result<(), AfbError> {
+        // place here any required api subscription
         afb_log_msg!(Debug, None, "start apiv4={:?}", api.get_apiv4());
         Ok(())
     }
@@ -151,7 +147,6 @@ pub fn binding_init(rootv4: AfbApiV4, jconf: JsoncObj) -> Result<&'static AfbApi
 
     // we need apiv4 to feed timer
     api.set_apiv4(rootv4);
-    println! ("**** root apiv4={:?}={:?} ****", rootv4, api.get_apiv4());
 
     // register verbs and events
     register(api, &config)?;
@@ -159,8 +154,6 @@ pub fn binding_init(rootv4: AfbApiV4, jconf: JsoncObj) -> Result<&'static AfbApi
     // finalize api
     api.require_api(lock_api);
     let api= api.finalize()?;
-
-    println! ("**** new apiv4={:?} ****", api.get_apiv4());
 
     Ok(api)
 }

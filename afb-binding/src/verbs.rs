@@ -58,7 +58,13 @@ struct UserPostData {
 AfbJobRegister!(DelayCtrl, jobpost_callback, UserPostData);
 fn jobpost_callback(job: &AfbSchedJob, _signal: i32, ctx: &mut UserPostData) {
     afb_log_msg!(Notice, None, "Callsync Lock/Unlock apiv4:{:?}", ctx.apiv4);
-    match AfbSubCall::call_sync(ctx.apiv4, ctx.lock_api, ctx.lock_verb, ctx.lock) {
+    let json= JsoncObj::new();
+    if ctx.lock {
+        json.add("action", "on").unwrap();
+    } else {
+        json.add("action", "off").unwrap();
+    }
+    match AfbSubCall::call_sync(ctx.apiv4, ctx.lock_api, ctx.lock_verb, json) {
         Err(error) => {
             afb_log_msg!(
                 Error,
