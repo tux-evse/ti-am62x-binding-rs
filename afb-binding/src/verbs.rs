@@ -57,13 +57,20 @@ struct UserPostData {
 // this callback starts from AfbSchedJob::new. If signal!=0 then callback overpass its watchdog timeout
 AfbJobRegister!(DelayCtrl, jobpost_callback, UserPostData);
 fn jobpost_callback(job: &AfbSchedJob, _signal: i32, ctx: &mut UserPostData) {
-    afb_log_msg!(Notice, None, "Callsync Lock/Unlock apiv4:{:?}", ctx.apiv4);
-    let json= JsoncObj::new();
+    let json = JsoncObj::new();
     if ctx.lock {
         json.add("action", "on").unwrap();
     } else {
         json.add("action", "off").unwrap();
     }
+    afb_log_msg!(
+        Notice,
+        ctx.apiv4,
+        "Callsync api:{}{}?query={}",
+        ctx.lock_api,
+        ctx.lock_verb,
+        json
+    );
     match AfbSubCall::call_sync(ctx.apiv4, ctx.lock_api, ctx.lock_verb, json) {
         Err(error) => {
             afb_log_msg!(
@@ -81,7 +88,7 @@ fn jobpost_callback(job: &AfbSchedJob, _signal: i32, ctx: &mut UserPostData) {
             let json = JsoncObj::new();
             json.add("action", "lock").expect("jsonc fail added action");
             json.add("status", ctx.lock as u32)
-                .expect("jsonc fail adding status");
+                .expect("jsonc fail status");
             afb_log_msg!(Info, job, "jobpost callback Lock= {}", &json);
             ctx.evt.push(json);
 
@@ -316,8 +323,7 @@ pub(crate) fn register(api: &mut AfbApi, config: &ApiUserData) -> Result<(), Afb
     // create event and store it within callback context
     let event = AfbEvent::new(config.uid);
 
-    println! ("**** register apiv4={:?} ****", api.get_apiv4());
-
+    println!("**** register apiv4={:?} ****", api.get_apiv4());
 
     // register dev handler within listening event loop
     AfbEvtFd::new(config.uid)
