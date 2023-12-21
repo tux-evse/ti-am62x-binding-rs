@@ -66,7 +66,7 @@ fn jobpost_callback(job: &AfbSchedJob, _signal: i32, ctx: &mut UserPostData) {
     afb_log_msg!(
         Notice,
         ctx.apiv4,
-        "Callsync api:{}{}?query={}",
+        "Callsync api:{}/{}?query={}",
         ctx.lock_api,
         ctx.lock_verb,
         json
@@ -76,7 +76,7 @@ fn jobpost_callback(job: &AfbSchedJob, _signal: i32, ctx: &mut UserPostData) {
             afb_log_msg!(
                 Error,
                 job,
-                "jobpost:{} callsync api:{}{} error:{}",
+                "jobpost:{} callsync api:{}/{} error:{}",
                 job.get_jobid(),
                 ctx.lock_api,
                 ctx.lock_verb,
@@ -88,7 +88,7 @@ fn jobpost_callback(job: &AfbSchedJob, _signal: i32, ctx: &mut UserPostData) {
                 afb_log_msg!(
                     Error,
                     job,
-                    "jobpost:{} callsync api:{}{} error:{}",
+                    "jobpost:{} callsync api:{}/{} error:{}",
                     job.get_jobid(),
                     ctx.lock_api,
                     ctx.lock_verb,
@@ -328,14 +328,12 @@ fn setslac_callback(
     Ok(())
 }
 
-pub(crate) fn register(api: &mut AfbApi, config: &ApiUserData) -> Result<(), AfbError> {
+pub(crate) fn register(rootv4: AfbApiV4, api: &mut AfbApi, config: &ApiUserData) -> Result<(), AfbError> {
     let ti_dev = TiRpmsg::new(config.cdev, config.rport, config.eptname)?;
     let handle = Rc::new(ti_dev);
 
     // create event and store it within callback context
     let event = AfbEvent::new(config.uid);
-
-    println!("**** register apiv4={:?} ****", api.get_apiv4());
 
     // register dev handler within listening event loop
     AfbEvtFd::new(config.uid)
@@ -345,7 +343,7 @@ pub(crate) fn register(api: &mut AfbApi, config: &ApiUserData) -> Result<(), Afb
             dev: handle.clone(),
             evt: event,
             count: Cell::new(0),
-            apiv4: api.get_apiv4(),
+            apiv4: rootv4,
             lock_api: config.lock_api,
             lock_verb: config.lock_verb,
         }))

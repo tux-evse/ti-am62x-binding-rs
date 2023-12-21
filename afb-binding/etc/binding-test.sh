@@ -2,6 +2,7 @@
 
 DIR=`dirname $0`
 cd $DIR/..
+pkill afb-ti-am62x
 
 # use libafb development version if any
 export LD_LIBRARY_PATH="/usr/local/lib64:$LD_LIBRARY_PATH"
