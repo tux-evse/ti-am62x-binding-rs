@@ -6,8 +6,14 @@
  * License: $RP_BEGIN_LICENSE$ SPDX:MIT https://opensource.org/licenses/MIT $RP_END_LICENSE$
  *
 */
+use std::env;
 
 fn main() {
     println!("cargo:rustc-link-search=/usr/local/lib64");
-    println!("cargo:rustc-link-arg=-lti_rpmsg_char");
+    println!("cargo:rustc-link-search=/usr/local/lib64");
+    if let Ok(value) = env::var("CARGO_TARGET_DIR") {
+        if let Ok(profile) = env::var("PROFILE") {
+            println!("cargo:rustc-link-search=crate={}{}", value, profile);
+        }
+    }
 }

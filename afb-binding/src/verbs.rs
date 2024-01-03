@@ -50,71 +50,109 @@ struct JobPostCtx {
     apiv4: AfbApiV4,
     lock_api: &'static str,
     lock_verb: &'static str,
-    lock: Rc<Cell<bool>>,
-    dev: Rc<TiRpmsg>,
+    iec6185: Rc<Cell<Iec61851Event>>,
+    imax: u32,
 }
 
 // this callback starts from AfbSchedJob::new. If signal!=0 then callback overpass its watchdog timeout
 AfbJobRegister!(JobPostCtrl, jobpost_callback, JobPostCtx);
 fn jobpost_callback(job: &AfbSchedJob, _signal: i32, ctx: &mut JobPostCtx) {
-    let json = JsoncObj::new();
-    if ctx.lock.get() {
-        json.add("action", "on").unwrap();
-    } else {
-        json.add("action", "off").unwrap();
-    }
-    afb_log_msg!(
-        Notice,
-        ctx.apiv4,
-        "Callsync api:{}/{}?query={}",
-        ctx.lock_api,
-        ctx.lock_verb,
-        json
-    );
-    match AfbSubCall::call_sync(ctx.apiv4, ctx.lock_api, ctx.lock_verb, json) {
-        Err(error) => {
-            afb_log_msg!(
-                Error,
-                job,
-                "jobpost:{} callsync api:{}/{} error:{}",
-                job.get_jobid(),
-                ctx.lock_api,
-                ctx.lock_verb,
-                error
-            );
-        }
-        Ok(response) => {
-            if response.get_status() < 0 {
-                afb_log_msg!(
-                    Error,
-                    job,
-                    "jobpost:{} callsync api:{}/{} error:{}",
-                    job.get_jobid(),
-                    ctx.lock_api,
-                    ctx.lock_verb,
-                    afb_error_info(response.get_status())
-                );
-            } else {
-                // push evt to listening bindings
-                let json = JsoncObj::new();
-                json.add("action", "lock").expect("jsonc fail added action");
-                json.add("status", ctx.lock.get() as u32)
-                    .expect("jsonc fail status");
-                afb_log_msg!(Info, job, "jobpost callback Lock= {}", &json);
-                ctx.evt.push(json);
+    let mut check_iec = || -> Result<(), AfbError> {
+        let iec = ctx.iec6185.get();
 
-                // send power status to m4 formware
-                let msg = mk_power(ctx.lock.get()).expect("jobpost-fail-mk_power");
-                if let Err(error) = ctx.dev.write(&msg) {
-                    afb_log_msg!(
-                        Error,
-                        job,
-                        "Fail to push locl msg to m4 firmware error:{}",
-                        error
-                    );
-                };
+        let jsonc = match iec {
+            Iec61851Event::CarPluggedIn => {
+                // request lock motor from i2c binding
+                AfbSubCall::call_sync(ctx.apiv4, ctx.lock_api, ctx.lock_verb, "{'action':'on'}")?;
+                let event = JsoncObj::new();
+                event.add("Plugged", true)?;
+                event
             }
-        }
+
+            Iec61851Event::CarUnplugged => {
+                let event = JsoncObj::new();
+                event.add("Plugged", false)?;
+                event
+            }
+
+            Iec61851Event::CarRequestedPower => {
+                // send request to charging manager authorization
+                let event = JsoncObj::new();
+                event.add("PowerRqt", ctx.imax)?;
+                event
+            }
+
+            Iec61851Event::CarRequestedStopPower => {
+                // set max power 0
+                // M4 firmware cut power
+                ctx.imax = 0;
+                let event = JsoncObj::new();
+                event.add("PowerRqt", true)?;
+                event
+            }
+
+            // relay close vehicle charging
+            Iec61851Event::PowerOn => {
+                // notify max current
+                let event = JsoncObj::new();
+                event.add("RelayOn", false)?;
+                event
+            }
+
+            // relay close vehicle charging
+            Iec61851Event::PowerOff => {
+                // unlock motor
+                AfbSubCall::call_sync(ctx.apiv4, ctx.lock_api, ctx.lock_verb, "{'action':'off'}")?;
+                let event = JsoncObj::new();
+                event.add("RelayOn", 0)?;
+                event
+            }
+
+            Iec61851Event::ErrorE
+            | Iec61851Event::ErrorDf
+            | Iec61851Event::ErrorRelais
+            | Iec61851Event::ErrorRcd => {
+                // no action send error message
+                let event = JsoncObj::new();
+                event.add("Error", ctx.iec6185.get().as_str_name())?;
+                event
+            }
+
+            Iec61851Event::PpImax13a => {
+                // store cable max power for relay close
+                ctx.imax = 13;
+                return Ok(());
+            }
+            Iec61851Event::PpImax20a => {
+                ctx.imax = 20;
+                return Ok(());
+            }
+
+            Iec61851Event::PpImax32a => {
+                ctx.imax = 32;
+                return Ok(());
+            }
+
+            Iec61851Event::PpImax64a => {
+                ctx.imax = 64;
+                return Ok(());
+            }
+
+            _ => return Ok(()), // ignore any other case
+        };
+
+        ctx.evt.push(jsonc);
+        Ok(())
+    };
+
+    if let Err(error) = check_iec() {
+        afb_log_msg!(
+            Error,
+            job,
+            "callback jobpost:{} error:{}",
+            job.get_jobid(),
+            error
+        );
     }
 }
 
@@ -122,10 +160,8 @@ fn jobpost_callback(job: &AfbSchedJob, _signal: i32, ctx: &mut JobPostCtx) {
 struct DevAsyncCtx {
     count: Cell<u32>,
     dev: Rc<TiRpmsg>,
-    evt: &'static AfbEvent,
-    apiv4: AfbApiV4,
-    lock_toggle: Rc<Cell<bool>>,
-    job_post: &'static AfbSchedJob
+    job_post: &'static AfbSchedJob,
+    iec6185: Rc<Cell<Iec61851Event>>,
 }
 AfbEvtFdRegister!(DecAsyncCtrl, async_dev_cb, DevAsyncCtx);
 fn async_dev_cb(_event: &AfbEvtFd, revent: u32, ctx: &mut DevAsyncCtx) {
@@ -153,25 +189,12 @@ fn async_dev_cb(_event: &AfbEvtFd, revent: u32, ctx: &mut DevAsyncCtx) {
                 afb_log_msg!(Debug, None, "Device heartbeat count={}", count);
             }
 
-            EventMsg::Evt(iso6185) => {
-                ctx.evt.push(iso6185.as_str_name());
-                match iso6185 {
-                    Iec61851Event::CarPluggedIn => {
-                        afb_log_msg!(Debug, None, "JobPost CarPluggedIn rootv4:{:?}", ctx.apiv4);
-                        ctx.lock_toggle.set(true);
-                        let _= ctx.job_post.post(100);
-                    }
-                    Iec61851Event::CarRequestedStopPower => {
-                        afb_log_msg!(Debug, None, "JobPost CarRequestedStopPower");
-                        ctx.lock_toggle.set(false);
-                        let _= ctx.job_post.post(100);
-                    }
-                    _ => {
-                        afb_log_msg!(Debug, None, "No JobPost evt:{}", iso6185.as_str_name());
-                    } // others do nothing
-                }
+            EventMsg::Evt(iec6185) => {
+                afb_log_msg!(Debug, None, "JobPost CarRequestedStopPower");
+                ctx.iec6185.set(iec6185);
+                let _ = ctx.job_post.post(100);
             }
-        };
+        }
     }
 }
 
@@ -269,6 +292,7 @@ fn setpwm_callback(
     request.reply(AFB_NO_DATA, 0);
     Ok(())
 }
+
 struct SetSlacData {
     dev: Rc<TiRpmsg>,
 }
@@ -297,7 +321,11 @@ fn setslac_callback(
     Ok(())
 }
 
-pub(crate) fn register(rootv4: AfbApiV4, api: &mut AfbApi, config: &ApiUserData) -> Result<(), AfbError> {
+pub(crate) fn register(
+    rootv4: AfbApiV4,
+    api: &mut AfbApi,
+    config: &ApiUserData,
+) -> Result<(), AfbError> {
     let ti_dev = TiRpmsg::new(config.cdev, config.rport, config.eptname)?;
     let handle = Rc::new(ti_dev);
 
@@ -305,18 +333,18 @@ pub(crate) fn register(rootv4: AfbApiV4, api: &mut AfbApi, config: &ApiUserData)
     let event = AfbEvent::new(config.uid);
 
     // job post lock toggle is set from event handler
-    let lock_toggle= Rc::new(Cell::new(false));
+    let iec6185 = Rc::new(Cell::new(Iec61851Event::CarUnplugged));
 
     // post post is used to delay 100ms lock motor
-    let job_post = AfbSchedJob::new("Lock/Unlock")
+    let job_post = AfbSchedJob::new("Iec-Event")
         .set_exec_watchdog(2) // limit exec time to 200ms;
         .set_callback(Box::new(JobPostCtx {
-            dev: handle.clone(),
             evt: event,
             apiv4: rootv4,
             lock_api: config.lock_api,
             lock_verb: config.lock_verb,
-            lock: lock_toggle.clone(),
+            iec6185: iec6185.clone(),
+            imax: 0,
         }))
         .finalize();
 
@@ -326,10 +354,8 @@ pub(crate) fn register(rootv4: AfbApiV4, api: &mut AfbApi, config: &ApiUserData)
         .set_events(AfbEvtFdPoll::IN)
         .set_callback(Box::new(DevAsyncCtx {
             dev: handle.clone(),
-            evt: event,
             count: Cell::new(0),
-            apiv4: rootv4,
-            lock_toggle: lock_toggle.clone(),
+            iec6185: iec6185.clone(),
             job_post,
         }))
         .start()?;
