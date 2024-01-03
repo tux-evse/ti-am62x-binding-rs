@@ -1,28 +1,34 @@
-ti-am62x-binding
-================
+#ti-am62x-binding
+
 Provides:
+
 * Rust binding to Pionix [ti-am62x-evse-sdk](https://github.com/PionixPublic/ti-am62x-evse-sdk)
 * afb-binding micro service architecture and security model [api-v4](https://github.com/redpesk-common/afb-librust/blob/master/docs/1-architecture_presentation.md)
 
 
 ## Reference
+
 https://software-dl.ti.com/processor-sdk-linux/esd/AM64X/latest/exports/docs/linux/Foundational_Components_IPC64x.html
 
 ## Dependencies:
+
 * C/lib ti_rpmsg_char: git://git.ti.com/rpmsg/ti-rpmsg-char.git
 * C compiler for build.rs code generation
 * protobuf-compiler: dnf install protobuf-compiler (for OpenSuse check [1])
 
 Warning: work under heavy development
+
 * expect afbv4 to be installed in $Project/../Rust with (Fulup-Dev) branch
 
 [1] OpenSuSE note:
+
 SuSE uses a custom name for protobuf package and binary, and because of protoc execution model a symbolic link cannot do the job
  * zipper install protobuf-c
  * in your environment add ```export  PROTOC=/usr/bin/protoc-c```  (warning: a link cannot do the job)
 
 ## config
 
+```bash
   "binding": [
     {
         // binding name
@@ -44,29 +50,47 @@ SuSE uses a custom name for protobuf package and binary, and because of protoc e
         "tic": 1000
     }
   ]
+```
+
 ## list platform devices
+
+```bash
  ls -l /sys/bus/platform/devices | grep m4
+```
 
 ## list virtio devices
+
+```bash
  ls -l /sys/bus/virtio/devices | grep m4
+```
 
 ## list control device
+
+```bash
 ls -l /sys/bus/rpmsg/drivers/rpmsg_chrdev/virtio* | grep m4
+```
 
 ## debug
 
 ## rpmsg_char_simple
 
 ## check journal
+
 journalctl | grep virtio => addr==epnum
 
 ## check PID waiting on remote proc
+
+```bash
 cat /sys/kernel/debug/remoteproc/remoteproc0/trace0
 lsof /dev/rpmsg0 # recuperer le PID
 ls -l /proc/PID/fd/* | grep rpmsg
+```
 
 ## check firmware loaded on rproc0
+
+```bash
 cat /sys/class/remoteproc/remoteproc0/firmware
+```
 
 ## WARNING:
 
