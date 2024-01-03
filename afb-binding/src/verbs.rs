@@ -35,14 +35,9 @@ struct DevTimerCtx {
     heartbeat: Vec<u8>,
 }
 AfbTimerRegister!(TimerCtrl, timer_callback, DevTimerCtx);
-fn timer_callback(timer: &AfbTimer, _decount: u32, ctx: &mut DevTimerCtx) {
+fn timer_callback(_timer: &AfbTimer, _decount: u32, ctx: &mut DevTimerCtx) -> Result<(), AfbError> {
     // send heartbeat message
-    match ctx.dev.write(&ctx.heartbeat) {
-        Err(error) => {
-            afb_log_msg!(Critical, timer, "{}", error);
-        }
-        Ok(()) => {}
-    };
+    ctx.dev.write(&ctx.heartbeat)
 }
 
 struct JobPostCtx {
@@ -56,104 +51,91 @@ struct JobPostCtx {
 
 // this callback starts from AfbSchedJob::new. If signal!=0 then callback overpass its watchdog timeout
 AfbJobRegister!(JobPostCtrl, jobpost_callback, JobPostCtx);
-fn jobpost_callback(job: &AfbSchedJob, _signal: i32, ctx: &mut JobPostCtx) {
-    let mut check_iec = || -> Result<(), AfbError> {
-        let iec = ctx.iec6185.get();
+fn jobpost_callback(_job: &AfbSchedJob, _signal: i32, ctx: &mut JobPostCtx) -> Result<(), AfbError> {
+    let iec = ctx.iec6185.get();
+    let jsonc = match iec {
+        Iec61851Event::CarPluggedIn => {
+            // request lock motor from i2c binding
+            AfbSubCall::call_sync(ctx.apiv4, ctx.lock_api, ctx.lock_verb, "{'action':'on'}")?;
+            let event = JsoncObj::new();
+            event.add("Plugged", true)?;
+            event
+        }
 
-        let jsonc = match iec {
-            Iec61851Event::CarPluggedIn => {
-                // request lock motor from i2c binding
-                AfbSubCall::call_sync(ctx.apiv4, ctx.lock_api, ctx.lock_verb, "{'action':'on'}")?;
-                let event = JsoncObj::new();
-                event.add("Plugged", true)?;
-                event
-            }
+        Iec61851Event::CarUnplugged => {
+            let event = JsoncObj::new();
+            event.add("Plugged", false)?;
+            event
+        }
 
-            Iec61851Event::CarUnplugged => {
-                let event = JsoncObj::new();
-                event.add("Plugged", false)?;
-                event
-            }
+        Iec61851Event::CarRequestedPower => {
+            // send request to charging manager authorization
+            let event = JsoncObj::new();
+            event.add("PowerRqt", ctx.imax)?;
+            event
+        }
 
-            Iec61851Event::CarRequestedPower => {
-                // send request to charging manager authorization
-                let event = JsoncObj::new();
-                event.add("PowerRqt", ctx.imax)?;
-                event
-            }
+        Iec61851Event::CarRequestedStopPower => {
+            // set max power 0
+            // M4 firmware cut power
+            ctx.imax = 0;
+            let event = JsoncObj::new();
+            event.add("PowerRqt", true)?;
+            event
+        }
 
-            Iec61851Event::CarRequestedStopPower => {
-                // set max power 0
-                // M4 firmware cut power
-                ctx.imax = 0;
-                let event = JsoncObj::new();
-                event.add("PowerRqt", true)?;
-                event
-            }
+        // relay close vehicle charging
+        Iec61851Event::PowerOn => {
+            // notify max current
+            let event = JsoncObj::new();
+            event.add("RelayOn", false)?;
+            event
+        }
 
-            // relay close vehicle charging
-            Iec61851Event::PowerOn => {
-                // notify max current
-                let event = JsoncObj::new();
-                event.add("RelayOn", false)?;
-                event
-            }
+        // relay close vehicle charging
+        Iec61851Event::PowerOff => {
+            // unlock motor
+            AfbSubCall::call_sync(ctx.apiv4, ctx.lock_api, ctx.lock_verb, "{'action':'off'}")?;
+            let event = JsoncObj::new();
+            event.add("RelayOn", 0)?;
+            event
+        }
 
-            // relay close vehicle charging
-            Iec61851Event::PowerOff => {
-                // unlock motor
-                AfbSubCall::call_sync(ctx.apiv4, ctx.lock_api, ctx.lock_verb, "{'action':'off'}")?;
-                let event = JsoncObj::new();
-                event.add("RelayOn", 0)?;
-                event
-            }
+        Iec61851Event::ErrorE
+        | Iec61851Event::ErrorDf
+        | Iec61851Event::ErrorRelais
+        | Iec61851Event::ErrorRcd => {
+            // no action send error message
+            let event = JsoncObj::new();
+            event.add("Error", ctx.iec6185.get().as_str_name())?;
+            event
+        }
 
-            Iec61851Event::ErrorE
-            | Iec61851Event::ErrorDf
-            | Iec61851Event::ErrorRelais
-            | Iec61851Event::ErrorRcd => {
-                // no action send error message
-                let event = JsoncObj::new();
-                event.add("Error", ctx.iec6185.get().as_str_name())?;
-                event
-            }
+        Iec61851Event::PpImax13a => {
+            // store cable max power for relay close
+            ctx.imax = 13;
+            return Ok(());
+        }
+        Iec61851Event::PpImax20a => {
+            ctx.imax = 20;
+            return Ok(());
+        }
 
-            Iec61851Event::PpImax13a => {
-                // store cable max power for relay close
-                ctx.imax = 13;
-                return Ok(());
-            }
-            Iec61851Event::PpImax20a => {
-                ctx.imax = 20;
-                return Ok(());
-            }
+        Iec61851Event::PpImax32a => {
+            ctx.imax = 32;
+            return Ok(());
+        }
 
-            Iec61851Event::PpImax32a => {
-                ctx.imax = 32;
-                return Ok(());
-            }
+        Iec61851Event::PpImax64a => {
+            ctx.imax = 64;
+            return Ok(());
+        }
 
-            Iec61851Event::PpImax64a => {
-                ctx.imax = 64;
-                return Ok(());
-            }
-
-            _ => return Ok(()), // ignore any other case
-        };
-
-        ctx.evt.push(jsonc);
-        Ok(())
+        _ => return Ok(()), // ignore any other case
     };
 
-    if let Err(error) = check_iec() {
-        afb_log_msg!(
-            Error,
-            job,
-            "callback jobpost:{} error:{}",
-            job.get_jobid(),
-            error
-        );
-    }
+    ctx.evt.push(jsonc);
+    Ok(())
 }
 
 // on event ctx and callback
@@ -164,19 +146,13 @@ struct DevAsyncCtx {
     iec6185: Rc<Cell<Iec61851Event>>,
 }
 AfbEvtFdRegister!(DecAsyncCtrl, async_dev_cb, DevAsyncCtx);
-fn async_dev_cb(_event: &AfbEvtFd, revent: u32, ctx: &mut DevAsyncCtx) {
+fn async_dev_cb(_event: &AfbEvtFd, revent: u32, ctx: &mut DevAsyncCtx) -> Result<(), AfbError> {
     if revent == AfbEvtFdPoll::IN.bits() {
         #[allow(invalid_value)]
         let mut buffer: [u8; PROTOBUF_MAX_CAPACITY as usize] =
             unsafe { MaybeUninit::uninit().assume_init() };
-        let len = match ctx.dev.read(&mut buffer) {
-            Ok(len) => len,
-            Err(error) => {
-                afb_log_msg!(Critical, None, "{}", error);
-                return;
-            }
-        };
 
+        let len = ctx.dev.read(&mut buffer)?;
         let data = &buffer[0..len];
         match msg_uncode(data) {
             EventMsg::Err(error) => {
@@ -196,6 +172,7 @@ fn async_dev_cb(_event: &AfbEvtFd, revent: u32, ctx: &mut DevAsyncCtx) {
             }
         }
     }
+    Ok(())
 }
 
 struct SubscribeData {
