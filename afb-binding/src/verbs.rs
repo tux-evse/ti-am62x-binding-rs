@@ -294,7 +294,7 @@ pub(crate) fn register(
     let handle = Rc::new(ti_dev);
 
     // create event and store it within callback context
-    let event = AfbEvent::new(config.uid);
+    let event = AfbEvent::new("eic6185");
 
     // job post lock toggle is set from event handler
     let iec6185 = Rc::new(Cell::new(Iec61851Event::CarUnplugged));
