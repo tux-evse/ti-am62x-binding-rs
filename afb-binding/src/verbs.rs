@@ -300,7 +300,7 @@ pub(crate) fn register(
     let iec6185 = Rc::new(Cell::new(Iec61851Event::CarUnplugged));
 
     // post post is used to delay 100ms lock motor
-    let job_post = AfbSchedJob::new("Iec-Event")
+    let job_post = AfbSchedJob::new("iec6185-job")
         .set_exec_watchdog(2) // limit exec time to 200ms;
         .set_callback(Box::new(JobPostCtx {
             evt: event,

@@ -7,8 +7,8 @@
     "binding": [
         {
             "path": "/usr/redpesk/ti-am62x-binding-rs/lib/libafb_tiam62x.so",
-            "uid": "ti-am62x",
-            "api": "tiam62x",
+            "uid": "iec6185",
+            "api": "am62x",
             "info": "Ti MCU(am62x) firmware rpmsg/openamp API",
             "eptname": "rpmsg_tuxevse",
             "rport": 14,
