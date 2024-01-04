@@ -14,7 +14,7 @@ use afbv4::prelude::*;
 
 AfbDataConverter!(eic6185_msg, Eic6185Msg);
 #[derive(Serialize, Deserialize, Debug)]
-#[serde(rename_all = "lowercase", untagged)]
+#[serde(rename_all = "lowercase")]
 pub enum Eic6185Msg {
     Plugged(bool),
     PowerRqt(u32),
