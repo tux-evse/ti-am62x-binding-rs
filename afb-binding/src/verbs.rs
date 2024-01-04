@@ -25,6 +25,7 @@ use std::rc::Rc;
 use crate::prelude::*;
 use afbv4::prelude::*;
 use rpmsg::prelude::*;
+use typesv4::prelude::*;
 
 // protobuf maximum buffer size
 const PROTOBUF_MAX_CAPACITY: usize = 256;
@@ -53,52 +54,40 @@ struct JobPostCtx {
 AfbJobRegister!(JobPostCtrl, jobpost_callback, JobPostCtx);
 fn jobpost_callback(_job: &AfbSchedJob, _signal: i32, ctx: &mut JobPostCtx) -> Result<(), AfbError> {
     let iec = ctx.iec6185.get();
-    let jsonc = match iec {
+    let eic_msg = match iec {
         Iec61851Event::CarPluggedIn => {
             // request lock motor from i2c binding
             AfbSubCall::call_sync(ctx.apiv4, ctx.lock_api, ctx.lock_verb, "{'action':'on'}")?;
-            let event = JsoncObj::new();
-            event.add("Plugged", true)?;
-            event
+            Eic6185Msg::Plugged(true)
         }
 
         Iec61851Event::CarUnplugged => {
-            let event = JsoncObj::new();
-            event.add("Plugged", false)?;
-            event
+            Eic6185Msg::Plugged(false)
         }
 
         Iec61851Event::CarRequestedPower => {
             // send request to charging manager authorization
-            let event = JsoncObj::new();
-            event.add("PowerRqt", ctx.imax)?;
-            event
+            Eic6185Msg::PowerRqt(ctx.imax)
         }
 
         Iec61851Event::CarRequestedStopPower => {
             // set max power 0
             // M4 firmware cut power
             ctx.imax = 0;
-            let event = JsoncObj::new();
-            event.add("PowerRqt", true)?;
-            event
+            Eic6185Msg::PowerRqt(ctx.imax)
         }
 
         // relay close vehicle charging
         Iec61851Event::PowerOn => {
             // notify max current
-            let event = JsoncObj::new();
-            event.add("RelayOn", false)?;
-            event
+            Eic6185Msg::RelayOn(true)
         }
 
         // relay close vehicle charging
         Iec61851Event::PowerOff => {
             // unlock motor
             AfbSubCall::call_sync(ctx.apiv4, ctx.lock_api, ctx.lock_verb, "{'action':'off'}")?;
-            let event = JsoncObj::new();
-            event.add("RelayOn", 0)?;
-            event
+            Eic6185Msg::RelayOn(false)
         }
 
         Iec61851Event::ErrorE
@@ -106,9 +95,7 @@ fn jobpost_callback(_job: &AfbSchedJob, _signal: i32, ctx: &mut JobPostCtx) -> R
         | Iec61851Event::ErrorRelais
         | Iec61851Event::ErrorRcd => {
             // no action send error message
-            let event = JsoncObj::new();
-            event.add("Error", ctx.iec6185.get().as_str_name())?;
-            event
+            Eic6185Msg::Error(iec.as_str_name().to_string())
         }
 
         Iec61851Event::PpImax13a => {
@@ -134,7 +121,7 @@ fn jobpost_callback(_job: &AfbSchedJob, _signal: i32, ctx: &mut JobPostCtx) -> R
         _ => return Ok(()), // ignore any other case
     };
 
-    ctx.evt.push(jsonc);
+    ctx.evt.push(eic_msg);
     Ok(())
 }
 

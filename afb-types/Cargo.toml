@@ -1,5 +1,5 @@
 [package]
-name = "tiam62x-binding"
+name = "typesv4"
 version = "0.0.1"
 edition = "2021"
 authors = ["Fulup Le Foll <fulup@iot.bzh>"]
@@ -10,11 +10,8 @@ build = "etc/build.rs"
 afbv4 = {git= "https://github.com/redpesk-common/afb-librust", branch="master", optional = true}
 serde = { version = "1.0", features = ["derive"] }
 serde_json={ version= "1.0"}
-rpmsg= {path ="../ti-rpmsg"}
-typesv4= {path ="../afb-types"}
-
 
 [lib]
-name = "afb_tiam62x"
-crate-type = ["cdylib"]
+name = "typesv4"
+crate-type = ["lib"]
 path = "src/libso.rs"

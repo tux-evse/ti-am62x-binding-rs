@@ -3,6 +3,7 @@ resolver = "2"
 
 members = [
     "ti-rpmsg",
+    "afb-types",
     "afb-binding",
 ]
 

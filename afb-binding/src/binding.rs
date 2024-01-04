@@ -22,6 +22,7 @@
 use crate::prelude::*;
 use afbv4::prelude::*;
 use rpmsg::prelude::*;
+use typesv4::prelude::*;
 
 pub(crate) struct ApiUserData {
     pub uid: &'static str,
@@ -59,6 +60,7 @@ pub fn binding_init(rootv4: AfbApiV4, jconf: JsoncObj) -> Result<&'static AfbApi
     afb_log_msg!(Info, rootv4, "config:{}", jconf);
     // register custom afb-v4 type converter
     rpmsg_register()?;
+    am62x_registers()?;
 
     let uid = if let Ok(value) = jconf.get::<String>("uid") {
         to_static_str(value)
