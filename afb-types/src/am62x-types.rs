@@ -17,7 +17,7 @@ AfbDataConverter!(eic6185_msg, Eic6185Msg);
 #[serde(rename_all = "lowercase", untagged)]
 pub enum Eic6185Msg {
     Plugged(bool),
-    PowerRqt(u3),
+    PowerRqt(u32),
     RelayOn(bool),
     Error(String),
 }
