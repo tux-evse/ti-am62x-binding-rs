@@ -1,0 +1,6 @@
+{
+  "name": "afb-am62x",
+  "no-ldpaths": true,
+  "alias": ["/devtools:/usr/share/afb-ui-devtools/binder"],
+  "monitoring": true
+}

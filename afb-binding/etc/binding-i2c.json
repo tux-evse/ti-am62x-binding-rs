@@ -1,21 +1,6 @@
 {
-    "name": "afb-ti-am62x",
-    "no-ldpaths": true,
-    "alias": [
-        "/devtools:/usr/share/afb-ui-devtools/binder"
-    ],
+
     "binding": [
-        {
-            "path": "/usr/redpesk/ti-am62x-binding-rs/lib/libafb_tiam62x.so",
-            "uid": "iec6185",
-            "api": "am62x",
-            "info": "Ti MCU(am62x) firmware rpmsg/openamp API",
-            "eptname": "rpmsg_tuxevse",
-            "rport": 14,
-            "tic": 5000,
-            "lock_api": "i2c",
-            "lock_verb": "gpio/lock-motor",
-        },
         {
             "path": "/usr/redpesk/i2c-binding-rs/lib/libafb_i2c.so",
             "uid": "i2c-bus",
