@@ -54,40 +54,40 @@ struct JobPostCtx {
 AfbJobRegister!(JobPostCtrl, jobpost_callback, JobPostCtx);
 fn jobpost_callback(job: &AfbSchedJob, _signal: i32, ctx: &mut JobPostCtx) -> Result<(), AfbError> {
     let iec = ctx.iec6185.get();
-    let eic_msg = match iec {
+    let iec_msg = match iec {
         Iec61851Event::CarPluggedIn => {
             // request lock motor from i2c binding
             AfbSubCall::call_sync(ctx.apiv4, ctx.lock_api, ctx.lock_verb, "{'action':'on'}")?;
-            Eic6185Msg::Plugged(true)
+            iec6185Msg::Plugged(true)
         }
 
         Iec61851Event::CarUnplugged => {
-            Eic6185Msg::Plugged(false)
+            iec6185Msg::Plugged(false)
         }
 
         Iec61851Event::CarRequestedPower => {
             // send request to charging manager authorization
-            Eic6185Msg::PowerRqt(ctx.imax)
+            iec6185Msg::PowerRqt(ctx.imax)
         }
 
         Iec61851Event::CarRequestedStopPower => {
             // set max power 0
             // M4 firmware cut power
             ctx.imax = 0;
-            Eic6185Msg::PowerRqt(ctx.imax)
+            iec6185Msg::PowerRqt(ctx.imax)
         }
 
         // relay close vehicle charging
         Iec61851Event::PowerOn => {
             // notify max current
-            Eic6185Msg::RelayOn(true)
+            iec6185Msg::RelayOn(true)
         }
 
         // relay close vehicle charging
         Iec61851Event::PowerOff => {
             // unlock motor
             AfbSubCall::call_sync(ctx.apiv4, ctx.lock_api, ctx.lock_verb, "{'action':'off'}")?;
-            Eic6185Msg::RelayOn(false)
+            iec6185Msg::RelayOn(false)
         }
 
         Iec61851Event::ErrorE
@@ -95,7 +95,7 @@ fn jobpost_callback(job: &AfbSchedJob, _signal: i32, ctx: &mut JobPostCtx) -> Re
         | Iec61851Event::ErrorRelais
         | Iec61851Event::ErrorRcd => {
             // no action send error message
-            Eic6185Msg::Error(iec.as_str_name().to_string())
+            iec6185Msg::Error(iec.as_str_name().to_string())
         }
 
         Iec61851Event::PpImax13a => {
@@ -121,8 +121,8 @@ fn jobpost_callback(job: &AfbSchedJob, _signal: i32, ctx: &mut JobPostCtx) -> Re
         _ => return Ok(()), // ignore any other case
     };
 
-    afb_log_msg!(Notice, job, "am62x push event:{:?}", eic_msg);
-    ctx.evt.push(eic_msg);
+    afb_log_msg!(Notice, job, "am62x push event:{:?}", iec_msg);
+    ctx.evt.push(iec_msg);
     Ok(())
 }
 
@@ -294,7 +294,7 @@ pub(crate) fn register(
     let handle = Rc::new(ti_dev);
 
     // create event and store it within callback context
-    let event = AfbEvent::new("eic6185");
+    let event = AfbEvent::new("iec6185");
 
     // job post lock toggle is set from event handler
     let iec6185 = Rc::new(Cell::new(Iec61851Event::CarUnplugged));
@@ -395,7 +395,7 @@ pub(crate) fn register(
     api.add_verb(allow_power);
     api.add_verb(slac_status);
 
-    // init m4 firmware (set pwm-off and enable eic6185 event)
+    // init m4 firmware (set pwm-off and enable iec6185 event)
     for msg in [mk_pwm(&PwmState::Off, 0.0)?, mk_enable()?] {
         if let Err(error) = handle.write(&msg) {
             return afb_error!("m4-init-fail", "firmware refused command error={}", error);
