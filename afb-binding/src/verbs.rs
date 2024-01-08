@@ -149,7 +149,6 @@ fn async_dev_cb(_event: &AfbEvtFd, revent: u32, ctx: &mut DevAsyncCtx) -> Result
             EventMsg::Heartbeat() => {
                 let count = ctx.count.get() + 1;
                 ctx.count.set(count);
-                afb_log_msg!(Debug, None, "Device heartbeat count={}", count);
             }
 
             EventMsg::Evt(iec6185) => {
