@@ -48,6 +48,7 @@ struct JobPostCtx {
     lock_verb: &'static str,
     iec6185: Rc<Cell<Iec61851Event>>,
     imax: u32,
+    dev: Rc<TiRpmsg>,
 }
 
 // this callback starts from AfbSchedJob::new. If signal!=0 then callback overpass its watchdog timeout
@@ -58,36 +59,41 @@ fn jobpost_callback(job: &AfbSchedJob, _signal: i32, ctx: &mut JobPostCtx) -> Re
         Iec61851Event::CarPluggedIn => {
             // request lock motor from i2c binding
             AfbSubCall::call_sync(ctx.apiv4, ctx.lock_api, ctx.lock_verb, "{'action':'on'}")?;
-            iec6185Msg::Plugged(true)
+            let msg = mk_pwm(&PwmState::On, 0.05)?;
+            ctx.dev.write(&msg)?;
+
+            Iec6185Msg::Plugged(true)
         }
 
         Iec61851Event::CarUnplugged => {
-            iec6185Msg::Plugged(false)
+            let msg = mk_pwm(&PwmState::Off, 0.0)?;
+            ctx.dev.write(&msg)?;
+            Iec6185Msg::Plugged(false)
         }
 
         Iec61851Event::CarRequestedPower => {
             // send request to charging manager authorization
-            iec6185Msg::PowerRqt(ctx.imax)
+            Iec6185Msg::PowerRqt(ctx.imax)
         }
 
         Iec61851Event::CarRequestedStopPower => {
             // set max power 0
             // M4 firmware cut power
             ctx.imax = 0;
-            iec6185Msg::PowerRqt(ctx.imax)
+            Iec6185Msg::PowerRqt(ctx.imax)
         }
 
         // relay close vehicle charging
         Iec61851Event::PowerOn => {
             // notify max current
-            iec6185Msg::RelayOn(true)
+            Iec6185Msg::RelayOn(true)
         }
 
         // relay close vehicle charging
         Iec61851Event::PowerOff => {
             // unlock motor
             AfbSubCall::call_sync(ctx.apiv4, ctx.lock_api, ctx.lock_verb, "{'action':'off'}")?;
-            iec6185Msg::RelayOn(false)
+            Iec6185Msg::RelayOn(false)
         }
 
         Iec61851Event::ErrorE
@@ -95,7 +101,7 @@ fn jobpost_callback(job: &AfbSchedJob, _signal: i32, ctx: &mut JobPostCtx) -> Re
         | Iec61851Event::ErrorRelais
         | Iec61851Event::ErrorRcd => {
             // no action send error message
-            iec6185Msg::Error(iec.as_str_name().to_string())
+            Iec6185Msg::Error(iec.as_str_name().to_string())
         }
 
         Iec61851Event::PpImax13a => {
@@ -304,6 +310,7 @@ pub(crate) fn register(
         .set_exec_watchdog(2) // limit exec time to 200ms;
         .set_callback(Box::new(JobPostCtx {
             evt: event,
+            dev: handle.clone(),
             apiv4: rootv4,
             lock_api: config.lock_api,
             lock_verb: config.lock_verb,

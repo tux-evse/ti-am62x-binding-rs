@@ -12,10 +12,10 @@
 use serde::{Deserialize, Serialize};
 use afbv4::prelude::*;
 
-AfbDataConverter!(iec6185_msg, iec6185Msg);
+AfbDataConverter!(iec6185_msg, Iec6185Msg);
 #[derive(Serialize, Deserialize, Debug)]
 #[serde(rename_all = "lowercase")]
-pub enum iec6185Msg {
+pub enum Iec6185Msg {
     Plugged(bool),
     PowerRqt(u32),
     RelayOn(bool),
