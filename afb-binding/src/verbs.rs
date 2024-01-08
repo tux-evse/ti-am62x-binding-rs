@@ -121,7 +121,7 @@ fn jobpost_callback(job: &AfbSchedJob, _signal: i32, ctx: &mut JobPostCtx) -> Re
         _ => return Ok(()), // ignore any other case
     };
 
-    afb_log_msg!(Notice, job, "azm62x push event:{:?}", eic_msg);
+    afb_log_msg!(Notice, job, "am62x push event:{:?}", eic_msg);
     ctx.evt.push(eic_msg);
     Ok(())
 }
