@@ -52,7 +52,7 @@ struct JobPostCtx {
 
 // this callback starts from AfbSchedJob::new. If signal!=0 then callback overpass its watchdog timeout
 AfbJobRegister!(JobPostCtrl, jobpost_callback, JobPostCtx);
-fn jobpost_callback(_job: &AfbSchedJob, _signal: i32, ctx: &mut JobPostCtx) -> Result<(), AfbError> {
+fn jobpost_callback(job: &AfbSchedJob, _signal: i32, ctx: &mut JobPostCtx) -> Result<(), AfbError> {
     let iec = ctx.iec6185.get();
     let eic_msg = match iec {
         Iec61851Event::CarPluggedIn => {
@@ -121,6 +121,7 @@ fn jobpost_callback(_job: &AfbSchedJob, _signal: i32, ctx: &mut JobPostCtx) -> R
         _ => return Ok(()), // ignore any other case
     };
 
+    afb_log_msg!(Notice, job, "azm62x push event:{:?}", eic_msg);
     ctx.evt.push(eic_msg);
     Ok(())
 }
@@ -152,7 +153,7 @@ fn async_dev_cb(_event: &AfbEvtFd, revent: u32, ctx: &mut DevAsyncCtx) -> Result
             }
 
             EventMsg::Evt(iec6185) => {
-                afb_log_msg!(Debug, None, "JobPost CarRequestedStopPower");
+                afb_log_msg!(Debug, None, "JobPost iec6185:{:?}", iec6185);
                 ctx.iec6185.set(iec6185);
                 let _ = ctx.job_post.post(100);
             }
