@@ -62,7 +62,6 @@ fn jobpost_callback(job: &AfbSchedJob, _signal: i32, ctx: &mut JobPostCtx) -> Re
             AfbSubCall::call_sync(ctx.apiv4, ctx.lock_api, ctx.lock_verb, "{'action':'on'}")?;
             let msg = mk_pwm(&PwmState::On, 0.05)?;
             ctx.dev.write(&msg)?;
-
             Iec6185Msg::Plugged(true)
         }
 
@@ -140,7 +139,7 @@ fn jobpost_callback(job: &AfbSchedJob, _signal: i32, ctx: &mut JobPostCtx) -> Re
         _ => return Ok(()), // ignore any other case
     };
 
-    afb_log_msg!(Notice, job, "am62x push event:{:?}", iec_msg);
+    afb_log_msg!(Notice, None, "JobPost push event:{:?}", iec_msg);
     ctx.evt.push(iec_msg);
     Ok(())
 }
@@ -311,6 +310,10 @@ pub(crate) fn register(
 ) -> Result<(), AfbError> {
     let ti_dev = TiRpmsg::new(config.cdev, config.rport, config.eptname)?;
     let handle = Rc::new(ti_dev);
+
+    // force PWM off when starting
+    let msg = mk_pwm(&PwmState::Off, 0.0)?;
+    handle.write(&msg)?;
 
     // create event and store it within callback context
     let event = AfbEvent::new("iec");

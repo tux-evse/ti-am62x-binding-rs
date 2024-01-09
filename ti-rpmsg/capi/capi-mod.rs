@@ -91,6 +91,7 @@ impl TiRpmsg {
         if handle == 0 as *mut cglue::rpmsg_char_dev {
             return afb_error!("ti-rmsg-open", "Fail to open ti-rpmsg device");
         }
+
         Ok(TiRpmsg { handle })
 
     }
