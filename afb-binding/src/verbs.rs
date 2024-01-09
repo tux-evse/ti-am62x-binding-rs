@@ -178,6 +178,7 @@ fn subscribe_callback(
     ctx: &mut SubscribeData,
 ) -> Result<(), AfbError> {
     let subcription = args.get::<bool>(0)?;
+
     if subcription {
         ctx.evt.subscribe(request)?;
     } else {
@@ -272,14 +273,14 @@ fn setslac_callback(
     args: &AfbData,
     ctx: &mut SetSlacData,
 ) -> Result<(), AfbError> {
-    let query = args.get::<JsoncObj>(0)?;
+    let status = args.get::<&SlacStatus>(0)?;
 
-    let state = match query.get::<String>("status")?.to_uppercase().as_str() {
-        "UDF" => SlacState::Udf,
-        "RUN" => SlacState::Run,
-        "OK" => SlacState::Ok,
-        "NOK" => SlacState::Nok,
-        _ => return afb_error!("setslac-invalid-query", "action should be ON|OFF|FAIL"),
+    let state = match status {
+        SlacStatus::MATCHING => SlacState::Run,
+        SlacStatus::MATCHED => SlacState::Ok,
+        SlacStatus::TIMEOUT => SlacState::Nok,
+        SlacStatus::UNMATCHED => SlacState::Nok,
+        _ => SlacState::Udf,
     };
 
     // this message cannot be build statically
@@ -377,11 +378,9 @@ pub(crate) fn register(
     let slac_status = AfbVerb::new("slac")
         .set_callback(Box::new(ctx))
         .set_info("set slac status")
-        .set_usage("'status':'udf/run/ok/nok'")
-        .set_sample("{'status':'udf'}")?
-        .set_sample("{'status':'run'}")?
-        .set_sample("{'status':'ok'}")?
-        .set_sample("{'status':'nok'}")?
+        .set_usage("SlacStatus Enum")
+        .set_sample("TIMEOUT")?
+        .set_sample("MATCHED")?
         .finalize()?;
 
     let ctx = PowerCtrl {
