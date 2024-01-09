@@ -58,7 +58,7 @@ fn jobpost_callback(_job: &AfbSchedJob, _signal: i32, ctx: &mut JobPostCtx) -> R
 
     let iec_msg = match iec {
         Iec61851Event::CarPluggedIn => {
-            afb_log_msg!(Debug, None, "JobPost ignored:{:?} lock motor", iec);
+            afb_log_msg!(Debug, None, "JobPost lock motor:{:?}", iec);
             // request lock motor from i2c binding
             AfbSubCall::call_sync(ctx.apiv4, ctx.lock_api, ctx.lock_verb, "{'action':'on'}")?;
             Iec6185Msg::Plugged(true)
