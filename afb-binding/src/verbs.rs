@@ -58,7 +58,6 @@ fn jobpost_callback(_job: &AfbSchedJob, _signal: i32, ctx: &mut JobPostCtx) -> R
 
     let iec_msg = match iec {
         Iec61851Event::CarPluggedIn => {
-            afb_log_msg!(Debug, None, "JobPost lock motor:{:?}", iec);
             // request lock motor from i2c binding
             AfbSubCall::call_sync(ctx.apiv4, ctx.lock_api, ctx.lock_verb, "{'action':'on'}")?;
             Iec6185Msg::Plugged(true)
@@ -174,9 +173,8 @@ fn async_dev_cb(_event: &AfbEvtFd, revent: u32, ctx: &mut DevAsyncCtx) -> Result
             }
 
             EventMsg::Evt(iec6185) => {
-                afb_log_msg!(Debug, None, "JobPost send:{:?}", iec6185);
                 ctx.iec6185.set(iec6185);
-                let _ = ctx.job_post.post(1);
+                let _ = ctx.job_post.post(0);
             }
         }
     }
