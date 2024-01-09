@@ -60,8 +60,8 @@ fn jobpost_callback(job: &AfbSchedJob, _signal: i32, ctx: &mut JobPostCtx) -> Re
         Iec61851Event::CarPluggedIn => {
             // request lock motor from i2c binding
             AfbSubCall::call_sync(ctx.apiv4, ctx.lock_api, ctx.lock_verb, "{'action':'on'}")?;
-            let msg = mk_pwm(&PwmState::On, 0.05)?;
-            ctx.dev.write(&msg)?;
+            // let msg = mk_pwm(&PwmState::On, 0.05)?;
+            // ctx.dev.write(&msg)?;
             Iec6185Msg::Plugged(true)
         }
 
