@@ -53,7 +53,7 @@ struct JobPostCtx {
 
 // this callback starts from AfbSchedJob::new. If signal!=0 then callback overpass its watchdog timeout
 AfbJobRegister!(JobPostCtrl, jobpost_callback, JobPostCtx);
-fn jobpost_callback(job: &AfbSchedJob, _signal: i32, ctx: &mut JobPostCtx) -> Result<(), AfbError> {
+fn jobpost_callback(_job: &AfbSchedJob, _signal: i32, ctx: &mut JobPostCtx) -> Result<(), AfbError> {
     let iec = ctx.iec6185.get();
 
     let iec_msg = match iec {

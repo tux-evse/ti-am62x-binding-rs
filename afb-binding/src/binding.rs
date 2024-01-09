@@ -69,10 +69,10 @@ pub fn binding_init(rootv4: AfbApiV4, jconf: JsoncObj) -> Result<&'static AfbApi
         "ti-am62x"
     };
 
-    let apiname = if let Ok(value) = jconf.get::<String>("api") {
+    let api = if let Ok(value) = jconf.get::<String>("api") {
         to_static_str(value)
     } else {
-        "ti-rmsg"
+        uid
     };
 
     let info = if let Ok(value) = jconf.get::<String>("info") {
@@ -143,7 +143,7 @@ pub fn binding_init(rootv4: AfbApiV4, jconf: JsoncObj) -> Result<&'static AfbApi
     ti_init(socname)?;
 
     // create a new api
-    let api = AfbApi::new(apiname)
+    let api = AfbApi::new(api)
         .set_info(info)
         .set_permission(permission)
         .set_callback(Box::new(ApiCtxData{}));
