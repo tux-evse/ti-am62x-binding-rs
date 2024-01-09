@@ -55,6 +55,7 @@ struct JobPostCtx {
 AfbJobRegister!(JobPostCtrl, jobpost_callback, JobPostCtx);
 fn jobpost_callback(job: &AfbSchedJob, _signal: i32, ctx: &mut JobPostCtx) -> Result<(), AfbError> {
     let iec = ctx.iec6185.get();
+
     let iec_msg = match iec {
         Iec61851Event::CarPluggedIn => {
             // request lock motor from i2c binding
@@ -105,21 +106,33 @@ fn jobpost_callback(job: &AfbSchedJob, _signal: i32, ctx: &mut JobPostCtx) -> Re
         }
 
         Iec61851Event::PpImax13a => {
-            // store cable max power for relay close
+            if ctx.imax != 13 {
+                afb_log_msg!(Debug, None, "JobPost iec6185:{:?}", iec);
+            }
+
             ctx.imax = 13;
             return Ok(());
         }
         Iec61851Event::PpImax20a => {
+            if ctx.imax != 20 {
+                afb_log_msg!(Debug, None, "JobPost iec6185:{:?}", iec);
+            }
             ctx.imax = 20;
             return Ok(());
         }
 
         Iec61851Event::PpImax32a => {
+            if ctx.imax != 32 {
+                afb_log_msg!(Debug, None, "JobPost iec6185:{:?}", iec);
+            }
             ctx.imax = 32;
             return Ok(());
         }
 
         Iec61851Event::PpImax64a => {
+            if ctx.imax != 64 {
+                afb_log_msg!(Debug, None, "JobPost iec6185:{:?}", iec);
+            }
             ctx.imax = 64;
             return Ok(());
         }
@@ -159,7 +172,6 @@ fn async_dev_cb(_event: &AfbEvtFd, revent: u32, ctx: &mut DevAsyncCtx) -> Result
             }
 
             EventMsg::Evt(iec6185) => {
-                afb_log_msg!(Debug, None, "JobPost iec6185:{:?}", iec6185);
                 ctx.iec6185.set(iec6185);
                 let _ = ctx.job_post.post(100);
             }
