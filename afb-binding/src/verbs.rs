@@ -174,7 +174,7 @@ fn async_dev_cb(_event: &AfbEvtFd, revent: u32, ctx: &mut DevAsyncCtx) -> Result
             }
 
             EventMsg::Evt(iec6185) => {
-                afb_log_msg!(Debug, None, "JobPost send:{:?}", iec);
+                afb_log_msg!(Debug, None, "JobPost send:{:?}", iec6185);
                 ctx.iec6185.set(iec6185);
                 let _ = ctx.job_post.post(1);
             }
