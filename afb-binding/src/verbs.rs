@@ -136,7 +136,11 @@ fn jobpost_callback(job: &AfbSchedJob, _signal: i32, ctx: &mut JobPostCtx) -> Re
             return Ok(());
         }
 
-        _ => return Ok(()), // ignore any other case
+        _ => {
+            // ignore any other case
+            afb_log_msg!(Debug, None, "JobPost ignored:{:?}", iec);
+            return Ok(());
+        }
     };
 
     afb_log_msg!(Notice, None, "JobPost push event:{:?}", iec_msg);
