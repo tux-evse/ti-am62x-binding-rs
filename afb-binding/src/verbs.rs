@@ -301,7 +301,7 @@ pub(crate) fn register(
     let handle = Rc::new(ti_dev);
 
     // create event and store it within callback context
-    let event = AfbEvent::new("iec6185");
+    let event = AfbEvent::new("iec");
 
     // job post lock toggle is set from event handler
     let iec6185 = Rc::new(Cell::new(Iec61851Event::CarUnplugged));
@@ -379,8 +379,8 @@ pub(crate) fn register(
         .set_callback(Box::new(ctx))
         .set_info("set slac status")
         .set_usage("SlacStatus Enum")
-        .set_sample("TIMEOUT")?
-        .set_sample("MATCHED")?
+        .set_sample("'TIMEOUT'")?
+        .set_sample("'MATCHED'")?
         .finalize()?;
 
     let ctx = PowerCtrl {
