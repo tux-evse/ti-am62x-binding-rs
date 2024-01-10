@@ -41,25 +41,12 @@ fn timer_callback(_timer: &AfbTimer, _decount: u32, ctx: &mut DevTimerCtx) -> Re
     ctx.dev.write(&ctx.heartbeat)
 }
 
-struct JobPostCtx {
-    evt: &'static AfbEvent,
-    apiv4: AfbApiV4,
-    lock_api: &'static str,
-    lock_verb: &'static str,
-    iec6185: Rc<Cell<Iec61851Event>>,
-    imax: u32,
-    dev: Rc<TiRpmsg>,
-}
-
-// this callback starts from AfbSchedJob::new. If signal!=0 then callback overpass its watchdog timeout
-AfbJobRegister!(JobPostCtrl, jobpost_callback, JobPostCtx);
-fn jobpost_callback(_job: &AfbSchedJob, _signal: i32, ctx: &mut JobPostCtx) -> Result<(), AfbError> {
-    let iec = ctx.iec6185.get();
+fn process_iec6185(apiv4: AfbApiV4, iec: &Iec61851Event, ctx: &mut DevAsyncCtx) -> Result<(), AfbError> {
 
     let iec_msg = match iec {
         Iec61851Event::CarPluggedIn => {
             // request lock motor from i2c binding
-            AfbSubCall::call_sync(ctx.apiv4, ctx.lock_api, ctx.lock_verb, "{'action':'on'}")?;
+            AfbSubCall::call_sync(apiv4, ctx.lock_api, ctx.lock_verb, "{'action':'on'}")?;
             Iec6185Msg::Plugged(true)
         }
 
@@ -90,7 +77,7 @@ fn jobpost_callback(_job: &AfbSchedJob, _signal: i32, ctx: &mut JobPostCtx) -> R
         // relay close vehicle charging
         Iec61851Event::PowerOff => {
             // unlock motor
-            AfbSubCall::call_sync(ctx.apiv4, ctx.lock_api, ctx.lock_verb, "{'action':'off'}")?;
+            AfbSubCall::call_sync(apiv4, ctx.lock_api, ctx.lock_verb, "{'action':'off'}")?;
             Iec6185Msg::RelayOn(false)
         }
 
@@ -150,8 +137,11 @@ fn jobpost_callback(_job: &AfbSchedJob, _signal: i32, ctx: &mut JobPostCtx) -> R
 struct DevAsyncCtx {
     count: Cell<u32>,
     dev: Rc<TiRpmsg>,
-    job_post: &'static AfbSchedJob,
-    iec6185: Rc<Cell<Iec61851Event>>,
+    lock_api: &'static str,
+    lock_verb: &'static str,
+    imax: u32,
+    evt: &'static AfbEvent,
+    apiv4: AfbApiV4,
 }
 AfbEvtFdRegister!(DecAsyncCtrl, async_dev_cb, DevAsyncCtx);
 fn async_dev_cb(_event: &AfbEvtFd, revent: u32, ctx: &mut DevAsyncCtx) -> Result<(), AfbError> {
@@ -173,8 +163,7 @@ fn async_dev_cb(_event: &AfbEvtFd, revent: u32, ctx: &mut DevAsyncCtx) -> Result
             }
 
             EventMsg::Evt(iec6185) => {
-                ctx.iec6185.set(iec6185);
-                let _ = ctx.job_post.post(0);
+                process_iec6185(ctx.apiv4, &iec6185, ctx)?;
             }
         }
     }
@@ -320,32 +309,18 @@ pub(crate) fn register(
     // create event and store it within callback context
     let event = AfbEvent::new("iec");
 
-    // job post lock toggle is set from event handler
-    let iec6185 = Rc::new(Cell::new(Iec61851Event::CarUnplugged));
-
-    // post post is used to delay 100ms lock motor
-    let job_post = AfbSchedJob::new("iec6185-job")
-        .set_exec_watchdog(2) // limit exec time to 200ms;
-        .set_callback(Box::new(JobPostCtx {
-            evt: event,
-            dev: handle.clone(),
-            apiv4: rootv4,
-            lock_api: config.lock_api,
-            lock_verb: config.lock_verb,
-            iec6185: iec6185.clone(),
-            imax: 0,
-        }))
-        .finalize();
-
     // register dev handler within listening event loop
     AfbEvtFd::new(config.uid)
         .set_fd(handle.get_fd())
         .set_events(AfbEvtFdPoll::IN)
         .set_callback(Box::new(DevAsyncCtx {
-            dev: handle.clone(),
+            apiv4: rootv4,
+            evt: event,
             count: Cell::new(0),
-            iec6185: iec6185.clone(),
-            job_post,
+            dev: handle.clone(),
+            lock_api: config.lock_api,
+            lock_verb: config.lock_verb,
+            imax: 0,
         }))
         .start()?;
 
