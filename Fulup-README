@@ -97,6 +97,14 @@ cat /sys/class/remoteproc/remoteproc0/firmware
 * send tiam62x/pwm=off to move CP from -12 to +12
 * send tiam62x/iec6185=true to enable device protobuf firmware event push
 
-# remote wireshark
-ssh root@phytec-power.tuxevse.vpn 'dumpcap -ieth2 -P -w -' >/tmp/toto
-wireshark /tmp/toto
+## Firmware log trace
+M4 console is visible on TI second console (usually ttyUSB1)
+```
+# use shift+ctr+A,X to exit
+picocom -b 115200 /dev/ttyUSB1
+```
+
+## remote wireshark
+```
+ssh root@phytec-power "tcpdump -s0 -U -n -w - -i eth2 " | wireshark -i -
+```

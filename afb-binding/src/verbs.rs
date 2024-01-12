@@ -91,15 +91,14 @@ fn process_iec6185(apiv4: AfbApiV4, iec: &Iec61851Event, ctx: &mut DevAsyncCtx) 
 
         Iec61851Event::PpImax13a => {
             if ctx.imax != 13 {
-                afb_log_msg!(Debug, None, "JobPost iec6185:{:?}", iec);
+                afb_log_msg!(Debug, None, "New iec6185:{:?}", iec);
             }
-
             ctx.imax = 13;
             return Ok(());
         }
         Iec61851Event::PpImax20a => {
             if ctx.imax != 20 {
-                afb_log_msg!(Debug, None, "JobPost iec6185:{:?}", iec);
+                afb_log_msg!(Debug, None, "New iec6185:{:?}", iec);
             }
             ctx.imax = 20;
             return Ok(());
@@ -107,7 +106,7 @@ fn process_iec6185(apiv4: AfbApiV4, iec: &Iec61851Event, ctx: &mut DevAsyncCtx) 
 
         Iec61851Event::PpImax32a => {
             if ctx.imax != 32 {
-                afb_log_msg!(Debug, None, "JobPost iec6185:{:?}", iec);
+                afb_log_msg!(Debug, None, "New iec6185:{:?}", iec);
             }
             ctx.imax = 32;
             return Ok(());
@@ -115,7 +114,7 @@ fn process_iec6185(apiv4: AfbApiV4, iec: &Iec61851Event, ctx: &mut DevAsyncCtx) 
 
         Iec61851Event::PpImax64a => {
             if ctx.imax != 64 {
-                afb_log_msg!(Debug, None, "JobPost iec6185:{:?}", iec);
+                afb_log_msg!(Debug, None, "New iec6185:{:?}", iec);
             }
             ctx.imax = 64;
             return Ok(());
@@ -123,7 +122,7 @@ fn process_iec6185(apiv4: AfbApiV4, iec: &Iec61851Event, ctx: &mut DevAsyncCtx) 
 
         _ => {
             // ignore any other case
-            afb_log_msg!(Debug, None, "JobPost ignored:{:?}", iec);
+            afb_log_msg!(Debug, None, "New ignored:{:?}", iec);
             return Ok(());
         }
     };
