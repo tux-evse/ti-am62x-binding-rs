@@ -41,8 +41,11 @@ fn timer_callback(_timer: &AfbTimer, _decount: u32, ctx: &mut DevTimerCtx) -> Re
     ctx.dev.write(&ctx.heartbeat)
 }
 
-fn process_iec6185(apiv4: AfbApiV4, iec: &Iec61851Event, ctx: &mut DevAsyncCtx) -> Result<(), AfbError> {
-
+fn process_iec6185(
+    apiv4: AfbApiV4,
+    iec: &Iec61851Event,
+    ctx: &mut DevAsyncCtx,
+) -> Result<(), AfbError> {
     let iec_msg = match iec {
         Iec61851Event::CarPluggedIn => {
             // request lock motor from i2c binding
@@ -265,6 +268,27 @@ fn setpwm_callback(
     Ok(())
 }
 
+struct SetImaxData {
+    dev: Rc<TiRpmsg>,
+}
+AfbVerbRegister!(SetImaxCtrl, set_imax_callback, SetImaxData);
+fn set_imax_callback(
+    request: &AfbRequest,
+    args: &AfbData,
+    ctx: &mut SetImaxData,
+) -> Result<(), AfbError> {
+    let imax = args.get::<u32>(0)?;
+    let duty= imax as f32/ 60.0;
+
+    // this message cannot be build statically
+    let msg = mk_pwm(&PwmState::On, duty)?;
+    if let Err(error) = ctx.dev.write(&msg) {
+        return afb_error!("m4-rpc-fail", "set_imax({}) {}", imax, error);
+    };
+    request.reply(AFB_NO_DATA, 0);
+    Ok(())
+}
+
 struct SetSlacData {
     dev: Rc<TiRpmsg>,
 }
@@ -363,6 +387,17 @@ pub(crate) fn register(
         .set_sample("{'action':'on', 'duty':0.05}")?
         .finalize()?;
 
+    let ctx = SetImaxCtrl {
+        dev: handle.clone(),
+    };
+
+    let set_imax = AfbVerb::new("imax")
+        .set_callback(Box::new(ctx))
+        .set_info("set_pwm")
+        .set_usage("imax")
+        .set_sample("20")?
+        .finalize()?;
+
     let ctx = SetSlacCtrl {
         dev: handle.clone(),
     };
@@ -388,6 +423,7 @@ pub(crate) fn register(
     api.add_event(event);
     api.add_verb(subscribe);
     api.add_verb(set_pwm);
+    api.add_verb(set_imax);
     api.add_verb(dev_enable);
     api.add_verb(allow_power);
     api.add_verb(slac_status);
