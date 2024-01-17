@@ -63,12 +63,7 @@ pub fn binding_init(rootv4: AfbApiV4, jconf: JsoncObj) -> Result<&'static AfbApi
     am62x_registers()?;
     slac_registers()?;
 
-    let uid = if let Ok(value) = jconf.get::<String>("uid") {
-        to_static_str(value)
-    } else {
-        "ti-am62x"
-    };
-
+    let uid = to_static_str(jconf.get::<String>("uid")?);
     let api = if let Ok(value) = jconf.get::<String>("api") {
         to_static_str(value)
     } else {
@@ -123,12 +118,6 @@ pub fn binding_init(rootv4: AfbApiV4, jconf: JsoncObj) -> Result<&'static AfbApi
         return afb_error!("amx62x-binding-config", "mandatory 'lock_verb' missing from binding json config")
     };
 
-    let permission = if let Ok(value) = jconf.get::<String>("permission") {
-        AfbPermission::new(to_static_str(value))
-    } else {
-        AfbPermission::new("acl:rmsg:ti")
-    };
-
     let config = ApiUserData {
         uid,
         cdev,
@@ -145,8 +134,11 @@ pub fn binding_init(rootv4: AfbApiV4, jconf: JsoncObj) -> Result<&'static AfbApi
     // create a new api
     let api = AfbApi::new(api)
         .set_info(info)
-        .set_permission(permission)
         .set_callback(Box::new(ApiCtxData{}));
+
+    if let Ok(value) = jconf.get::<String>("permission") {
+        api.set_permission(AfbPermission::new(to_static_str(value)));
+    };
 
     // register verbs and events
     register(rootv4, api, &config)?;
