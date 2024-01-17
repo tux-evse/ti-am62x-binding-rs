@@ -395,7 +395,7 @@ pub(crate) fn register(
         .set_callback(Box::new(ctx))
         .set_info("set_pwm")
         .set_usage("imax")
-        .set_sample("20")?
+        .set_sample("{20}")?
         .finalize()?;
 
     let ctx = SetSlacCtrl {
