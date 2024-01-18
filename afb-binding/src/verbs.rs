@@ -56,6 +56,8 @@ fn process_iec6185(
         Iec61851Event::CarUnplugged => {
             let msg = mk_pwm(&PwmState::Off, 0.0)?;
             ctx.dev.write(&msg)?;
+            // Fulup TBD for test only unlock motor as soon as IEC-UNLOCK is received
+            AfbSubCall::call_sync(apiv4, ctx.lock_api, ctx.lock_verb, "{'action':'off'}")?;
             Iec6185Msg::Plugged(false)
         }
 
