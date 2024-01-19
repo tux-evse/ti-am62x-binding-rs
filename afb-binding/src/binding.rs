@@ -94,13 +94,13 @@ pub fn binding_init(rootv4: AfbApiV4, jconf: JsoncObj) -> Result<&'static AfbApi
         "tux-evse-rmsg"
     };
 
-    let rport = if let Ok(value) = jconf.get::<i32>("ept_num") {
+    let rport = if let Ok(value) = jconf.get::<i32>("rport") {
         value
     } else {
         14 // default ti firmware sample
     };
 
-    let tic = if let Ok(value) = jconf.get::<u32>("ept_tic") {
+    let tic = if let Ok(value) = jconf.get::<u32>("tic") {
         value
     } else {
         1000

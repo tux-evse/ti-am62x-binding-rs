@@ -48,7 +48,6 @@ fn process_iec6185(
 ) -> Result<(), AfbError> {
     let iec_msg = match iec {
         Iec61851Event::CarPluggedIn => {
-            // request lock motor from i2c binding
             AfbSubCall::call_sync(apiv4, ctx.lock_api, ctx.lock_verb, "{'action':'on'}")?;
             Iec6185Msg::Plugged(true)
         }
@@ -95,38 +94,38 @@ fn process_iec6185(
         }
 
         Iec61851Event::PpImax13a => {
-            if ctx.imax != 13 {
-                afb_log_msg!(Debug, None, "New iec6185:{:?}", iec);
-                ctx.imax = 13;
-                Iec6185Msg::PowerRqt(ctx.imax);
+            if ctx.imax == 13 {
+                return Ok(());
             }
-            return Ok(());
+            afb_log_msg!(Debug, None, "New iec6185:{:?}", iec);
+            ctx.imax = 13;
+            Iec6185Msg::PowerRqt(ctx.imax)
         }
         Iec61851Event::PpImax20a => {
-            if ctx.imax != 20 {
-                afb_log_msg!(Debug, None, "New iec6185:{:?}", iec);
-                ctx.imax = 20;
-                Iec6185Msg::PowerRqt(ctx.imax);
+            if ctx.imax == 20 {
+                return Ok(());
             }
-            return Ok(());
+            afb_log_msg!(Debug, None, "New iec6185:{:?}", iec);
+            ctx.imax = 20;
+            Iec6185Msg::PowerRqt(ctx.imax)
         }
 
         Iec61851Event::PpImax32a => {
-            if ctx.imax != 32 {
-                afb_log_msg!(Debug, None, "New iec6185:{:?}", iec);
-                ctx.imax = 32;
-                Iec6185Msg::PowerRqt(ctx.imax);
+            if ctx.imax == 32 {
+                return Ok(());
             }
-            return Ok(());
+            afb_log_msg!(Debug, None, "New iec6185:{:?}", iec);
+            ctx.imax = 32;
+            Iec6185Msg::PowerRqt(ctx.imax)
         }
 
         Iec61851Event::PpImax64a => {
-            if ctx.imax != 64 {
-                afb_log_msg!(Debug, None, "New iec6185:{:?}", iec);
-                ctx.imax = 64;
-                Iec6185Msg::PowerRqt(ctx.imax);
+            if ctx.imax == 32 {
+                return Ok(());
             }
-            return Ok(());
+            afb_log_msg!(Debug, None, "New iec6185:{:?}", iec);
+            ctx.imax = 64;
+            Iec6185Msg::PowerRqt(ctx.imax)
         }
 
         _ => {
@@ -284,7 +283,7 @@ fn set_imax_callback(
     ctx: &mut SetImaxData,
 ) -> Result<(), AfbError> {
     let imax = args.get::<u32>(0)?;
-    let duty= imax as f32/ 60.0;
+    let duty = imax as f32 / 60.0;
 
     // this message cannot be build statically
     let msg = mk_pwm(&PwmState::On, duty)?;
