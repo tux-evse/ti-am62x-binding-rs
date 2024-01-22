@@ -62,14 +62,14 @@ fn process_iec6185(
 
         Iec61851Event::CarRequestedPower => {
             // send request to charging manager authorization
-            Iec6185Msg::PowerRqt(ctx.imax)
+            Iec6185Msg::PowerRqt(true)
         }
 
         Iec61851Event::CarRequestedStopPower => {
             // set max power 0
             // M4 firmware cut power
             ctx.imax = 0;
-            Iec6185Msg::PowerRqt(ctx.imax)
+            Iec6185Msg::PowerRqt(false)
         }
 
         // relay close vehicle charging
@@ -99,7 +99,7 @@ fn process_iec6185(
             }
             afb_log_msg!(Debug, None, "New iec6185:{:?}", iec);
             ctx.imax = 13;
-            Iec6185Msg::PowerRqt(ctx.imax)
+            Iec6185Msg::CableImax(ctx.imax)
         }
         Iec61851Event::PpImax20a => {
             if ctx.imax == 20 {
@@ -107,7 +107,7 @@ fn process_iec6185(
             }
             afb_log_msg!(Debug, None, "New iec6185:{:?}", iec);
             ctx.imax = 20;
-            Iec6185Msg::PowerRqt(ctx.imax)
+            Iec6185Msg::CableImax(ctx.imax)
         }
 
         Iec61851Event::PpImax32a => {
@@ -116,7 +116,7 @@ fn process_iec6185(
             }
             afb_log_msg!(Debug, None, "New iec6185:{:?}", iec);
             ctx.imax = 32;
-            Iec6185Msg::PowerRqt(ctx.imax)
+            Iec6185Msg::CableImax(ctx.imax)
         }
 
         Iec61851Event::PpImax64a => {
@@ -125,7 +125,7 @@ fn process_iec6185(
             }
             afb_log_msg!(Debug, None, "New iec6185:{:?}", iec);
             ctx.imax = 64;
-            Iec6185Msg::PowerRqt(ctx.imax)
+            Iec6185Msg::CableImax(ctx.imax)
         }
 
         _ => {
