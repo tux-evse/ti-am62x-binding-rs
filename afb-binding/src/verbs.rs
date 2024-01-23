@@ -316,8 +316,9 @@ fn setslac_callback(
     // this message cannot be build statically
     let msg = mk_slac(&state)?;
     if let Err(error) = ctx.dev.write(&msg) {
-        return afb_error!("m4-rpc-fail", "set_pwm({:?}):{}", state, error);
+        return afb_error!("m4-rpc-fail", "set_slac({:?}):{}", state, error);
     };
+
     request.reply(AFB_NO_DATA, 0);
     Ok(())
 }
