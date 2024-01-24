@@ -331,7 +331,11 @@ pub(crate) fn register(
     let ti_dev = TiRpmsg::new(config.cdev, config.rport, config.eptname)?;
     let handle = Rc::new(ti_dev);
 
-    // force PWM off when starting
+    // force power off
+    let msg= mk_disable()?;
+    handle.write(&msg)?;
+
+    // force PWM off
     let msg = mk_pwm(&PwmState::Off, 0.0)?;
     handle.write(&msg)?;
 
