@@ -62,6 +62,7 @@ fn process_iec6185(
 
         Iec61851Event::CarRequestedPower => {
             // send request to charging manager authorization
+            AfbSubCall::call_sync(apiv4, ctx.lock_api, ctx.lock_verb, "{'action':'on'}")?;
             Iec6185Msg::PowerRqt(true)
         }
 
@@ -69,6 +70,7 @@ fn process_iec6185(
             // set max power 0
             // M4 firmware cut power
             ctx.imax = 0;
+            AfbSubCall::call_sync(apiv4, ctx.lock_api, ctx.lock_verb, "{'action':'off'}")?;
             Iec6185Msg::PowerRqt(false)
         }
 
