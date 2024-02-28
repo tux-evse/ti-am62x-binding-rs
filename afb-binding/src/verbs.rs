@@ -418,8 +418,8 @@ pub(crate) fn register(
         .set_callback(Box::new(ctx))
         .set_info("set slac status")
         .set_usage("SlacStatus Enum")
-        .set_sample("{'UNMATCHED'}")?
-        .set_sample("{'MATCHED'}")?
+     //   .set_sample("{'UNMATCHED'}")?
+     //   .set_sample("{'MATCHED'}")?
         .finalize()?;
 
     let ctx = PowerCtrl {
