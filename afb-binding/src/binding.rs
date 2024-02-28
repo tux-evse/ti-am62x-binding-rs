@@ -64,59 +64,15 @@ pub fn binding_init(rootv4: AfbApiV4, jconf: JsoncObj) -> Result<&'static AfbApi
     slac_registers()?;
 
     let uid = to_static_str(jconf.get::<String>("uid")?);
-    let api = if let Ok(value) = jconf.get::<String>("api") {
-        to_static_str(value)
-    } else {
-        uid
-    };
-
-    let info = if let Ok(value) = jconf.get::<String>("info") {
-        to_static_str(value)
-    } else {
-        ""
-    };
-
-    let cdev = if let Ok(value) = jconf.get::<String>("cdev") {
-        Some(to_static_str(value))
-    } else {
-        None
-    };
-
-    let socname = if let Ok(value) = jconf.get::<String>("socname") {
-        Some(to_static_str(value))
-    } else {
-        None
-    };
-
-    let eptname = if let Ok(value) = jconf.get::<String>("eptname") {
-        to_static_str(value)
-    } else {
-        "tux-evse-rmsg"
-    };
-
-    let rport = if let Ok(value) = jconf.get::<i32>("rport") {
-        value
-    } else {
-        14 // default ti firmware sample
-    };
-
-    let tic = if let Ok(value) = jconf.get::<u32>("tic") {
-        value
-    } else {
-        1000
-    };
-
-    let lock_api = if let Ok(value) = jconf.get::<String>("lock_api") {
-        to_static_str(value)
-    } else {
-        return afb_error!("amx62x-binding-config", "mandatory 'lock_api' missing from binding json config")
-    };
-
-    let lock_verb = if let Ok(value) = jconf.get::<String>("lock_verb") {
-        to_static_str(value)
-    } else {
-        return afb_error!("amx62x-binding-config", "mandatory 'lock_verb' missing from binding json config")
-    };
+    let api = jconf.default::<&'static str>("api",uid)?;
+    let info = jconf.default::<&'static str>("info","")?;
+    let cdev = jconf.optional::<&'static str>("cdev")?;
+    let socname = jconf.optional::<&'static str>("socname")?;
+    let eptname = jconf.default::<&'static str>("eptname","tux-evse-rmsg")?;
+    let rport = jconf.default::<i32>("rport", 14)?;
+    let tic = jconf.default::<u32>("tic", 5000)?;
+    let lock_api = jconf.get::<&'static str>("lock_api")?;
+    let lock_verb = jconf.get::<&'static str>("lock_verb")?;
 
     let config = ApiUserData {
         uid,

@@ -358,6 +358,7 @@ pub(crate) fn register(
         .start()?;
 
     // set heartbeat timer
+    if config.tic > 0 {
     AfbTimer::new(config.uid)
         .set_period(config.tic)
         .set_decount(0)
@@ -366,6 +367,7 @@ pub(crate) fn register(
             dev: handle.clone(),
         }))
         .start()?;
+    }
 
     let subscribe = AfbVerb::new("subscribe")
         .set_callback(Box::new(SubscribeCtrl { evt: event }))
@@ -414,8 +416,8 @@ pub(crate) fn register(
         .set_callback(Box::new(ctx))
         .set_info("set slac status")
         .set_usage("SlacStatus Enum")
-        .set_sample("'TIMEOUT'")?
-        .set_sample("'MATCHED'")?
+        .set_sample("{'UNMATCHED'}")?
+        .set_sample("{'MATCHED'}")?
         .finalize()?;
 
     let ctx = PowerCtrl {
