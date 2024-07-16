@@ -128,15 +128,15 @@ pub fn mk_slac(state: &SlacState) -> Result<Vec<u8>, AfbError> {
 // decode message from encoded buffer
 pub fn msg_uncode(buffer: &[u8]) -> EventMsg {
     match pbuf::LowToHigh::decode(buffer) {
-        Err(error) => EventMsg::Err(AfbError::new("decoding-buffer-error", format!("{}", error))),
+        Err(error) => EventMsg::Err(AfbError::new("decoding-buffer-error", 0, format!("{}", error))),
         Ok(data) => match data.message {
-            None => EventMsg::Err(AfbError::new("decoding-buffer-empty", "no data to decode")),
+            None => EventMsg::Err(AfbError::new("decoding-buffer-empty", 0, "no data to decode")),
             Some(msg) => match msg {
                 pbuf::low_to_high::Message::Heartbeat(_) => EventMsg::Heartbeat(),
                 pbuf::low_to_high::Message::Event(value) => match Iec61851Event::try_from(value) {
                     Ok(iec) => EventMsg::Evt(iec),
                     Err(error) => EventMsg::Err(AfbError::new(
-                        "decoding-ioc6185-error",
+                        "decoding-ioc6185-error", 0,
                         format!("unknown iec6185 value={} error={}", value, error),
                     )),
                 },

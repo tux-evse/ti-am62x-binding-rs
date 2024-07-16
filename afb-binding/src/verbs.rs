@@ -35,8 +35,13 @@ struct DevTimerCtx {
     dev: Rc<TiRpmsg>,
     heartbeat: Vec<u8>,
 }
-AfbTimerRegister!(TimerCtrl, timer_callback, DevTimerCtx);
-fn timer_callback(_timer: &AfbTimer, _decount: u32, ctx: &mut DevTimerCtx) -> Result<(), AfbError> {
+
+fn timer_callback(
+    _timer: &AfbTimer, 
+    _decount: u32, 
+    ctx: &AfbCtxData
+) -> Result<(), AfbError> {
+    let ctx = ctx.get_ref::<DevTimerCtx>()?;
     // send heartbeat message
     ctx.dev.write(&ctx.heartbeat)
 }
@@ -152,8 +157,9 @@ struct DevAsyncCtx {
     evt: &'static AfbEvent,
     apiv4: AfbApiV4,
 }
-AfbEvtFdRegister!(DecAsyncCtrl, async_dev_cb, DevAsyncCtx);
-fn async_dev_cb(_event: &AfbEvtFd, revent: u32, ctx: &mut DevAsyncCtx) -> Result<(), AfbError> {
+
+fn async_dev_cb(_event: &AfbEvtFd, revent: u32, ctx: &AfbCtxData) -> Result<(), AfbError> {
+    let mut ctx = ctx.get_mut::<DevAsyncCtx>()?;
     if revent == AfbEvtFdPoll::IN.bits() {
         #[allow(invalid_value)]
         let mut buffer: [u8; PROTOBUF_MAX_CAPACITY as usize] =
@@ -172,7 +178,7 @@ fn async_dev_cb(_event: &AfbEvtFd, revent: u32, ctx: &mut DevAsyncCtx) -> Result
             }
 
             EventMsg::Evt(iec6185) => {
-                process_iec6185(ctx.apiv4, &iec6185, ctx)?;
+                process_iec6185(ctx.apiv4, &iec6185, &mut ctx)?;
             }
         }
     }
@@ -182,12 +188,13 @@ fn async_dev_cb(_event: &AfbEvtFd, revent: u32, ctx: &mut DevAsyncCtx) -> Result
 struct SubscribeData {
     evt: &'static AfbEvent,
 }
-AfbVerbRegister!(SubscribeCtrl, subscribe_callback, SubscribeData);
+
 fn subscribe_callback(
     request: &AfbRequest,
-    args: &AfbData,
-    ctx: &mut SubscribeData,
+    args: &AfbRqtData,
+    ctx: &AfbCtxData,
 ) -> Result<(), AfbError> {
+    let ctx = ctx.get_ref::<SubscribeData>()?;
     let subcription = args.get::<bool>(0)?;
 
     if subcription {
@@ -204,12 +211,13 @@ struct EnableData {
     enable: Vec<u8>,
     disable: Vec<u8>,
 }
-AfbVerbRegister!(EnableCtrl, enable_callback, EnableData);
+
 fn enable_callback(
     request: &AfbRequest,
-    args: &AfbData,
-    ctx: &mut EnableData,
+    args: &AfbRqtData,
+    ctx: &AfbCtxData,
 ) -> Result<(), AfbError> {
+    let ctx = ctx.get_ref::<EnableData>()?;
     let enable = args.get::<bool>(0)?;
 
     let msg = if enable { &ctx.enable } else { &ctx.disable };
@@ -226,12 +234,13 @@ struct PowerData {
     enable: Vec<u8>,
     disable: Vec<u8>,
 }
-AfbVerbRegister!(PowerCtrl, power_callback, PowerData);
+
 fn power_callback(
     request: &AfbRequest,
-    args: &AfbData,
-    ctx: &mut PowerData,
+    args: &AfbRqtData,
+    ctx: &AfbCtxData,
 ) -> Result<(), AfbError> {
+    let ctx = ctx.get_ref::<PowerData>()?;
     let enable = args.get::<bool>(0)?;
 
     let msg = if enable { &ctx.enable } else { &ctx.disable };
@@ -246,12 +255,13 @@ fn power_callback(
 struct SetPwmData {
     dev: Rc<TiRpmsg>,
 }
-AfbVerbRegister!(SetPwmCtrl, setpwm_callback, SetPwmData);
+
 fn setpwm_callback(
     request: &AfbRequest,
-    args: &AfbData,
-    ctx: &mut SetPwmData,
+    args: &AfbRqtData,
+    ctx: &AfbCtxData,
 ) -> Result<(), AfbError> {
+    let ctx = ctx.get_ref::<SetPwmData>()?;
     let query = args.get::<JsoncObj>(0)?;
 
     let state = match query.get::<String>("action")?.to_uppercase().as_str() {
@@ -278,12 +288,13 @@ fn setpwm_callback(
 struct SetImaxData {
     dev: Rc<TiRpmsg>,
 }
-AfbVerbRegister!(SetImaxCtrl, set_imax_callback, SetImaxData);
+
 fn set_imax_callback(
     request: &AfbRequest,
-    args: &AfbData,
-    ctx: &mut SetImaxData,
+    args: &AfbRqtData,
+    ctx: &AfbCtxData,
 ) -> Result<(), AfbError> {
+    let ctx = ctx.get_ref::<SetImaxData>()?;
     let imax = args.get::<u32>(0)?;
     let duty = imax as f32 / 60.0;
 
@@ -299,12 +310,13 @@ fn set_imax_callback(
 struct SetSlacData {
     dev: Rc<TiRpmsg>,
 }
-AfbVerbRegister!(SetSlacCtrl, setslac_callback, SetSlacData);
+
 fn setslac_callback(
     request: &AfbRequest,
-    args: &AfbData,
-    ctx: &mut SetSlacData,
+    args: &AfbRqtData,
+    ctx: &AfbCtxData,
 ) -> Result<(), AfbError> {
+    let ctx = ctx.get_ref::<SetSlacData>()?;
     let status = args.get::<&SlacStatus>(0)?;
 
     let state = match status {
@@ -348,7 +360,8 @@ pub(crate) fn register(
     AfbEvtFd::new(config.uid)
         .set_fd(handle.get_fd())
         .set_events(AfbEvtFdPoll::IN)
-        .set_callback(Box::new(DevAsyncCtx {
+        .set_callback(async_dev_cb)
+        .set_context(DevAsyncCtx {
             apiv4: rootv4,
             evt: event,
             count: Cell::new(0),
@@ -356,7 +369,7 @@ pub(crate) fn register(
             lock_api: config.lock_api,
             lock_verb: config.lock_verb,
             imax: 0,
-        }))
+        })
         .start()?;
 
     // set heartbeat timer
@@ -364,71 +377,78 @@ pub(crate) fn register(
     AfbTimer::new(config.uid)
         .set_period(config.tic)
         .set_decount(0)
-        .set_callback(Box::new(DevTimerCtx {
+        .set_callback(timer_callback)
+        .set_context(DevTimerCtx {
             heartbeat: mk_heartbeat()?,
             dev: handle.clone(),
-        }))
+        })
         .start()?;
     }
 
     let subscribe = AfbVerb::new("subscribe")
-        .set_callback(Box::new(SubscribeCtrl { evt: event }))
+        .set_callback(subscribe_callback)
+        .set_context(SubscribeData{ evt: event })
         .set_info("subscribe Iec6185 event")
         .set_usage("true|false")
         .finalize()?;
 
-    let ctx = EnableCtrl {
+    let ctx = EnableData {
         dev: handle.clone(),
         enable: mk_enable()?,
         disable: mk_disable()?,
     };
 
     let dev_enable = AfbVerb::new("iec6185")
-        .set_callback(Box::new(ctx))
+        .set_callback(enable_callback)
+        .set_context(ctx)
         .set_info("enable/disable Iec6185 event (true/false)")
         .set_usage("true|false")
         .finalize()?;
 
-    let ctx = SetPwmCtrl {
+      let ctx = SetPwmData {
         dev: handle.clone(),
     };
 
     let set_pwm = AfbVerb::new("pwm")
-        .set_callback(Box::new(ctx))
+        .set_callback(setpwm_callback)
+        .set_context(ctx)
         .set_info("set_pwm")
         .set_usage("'action':'on/off','duty':0.05")
-        .set_action("['on','off']")?
-        .set_sample("{'action':'on', 'duty':0.05}")?
+        .set_actions("['on','off']")?
+        .add_sample("{'action':'on', 'duty':0.05}")?
         .finalize()?;
 
-    let ctx = SetImaxCtrl {
+      let ctx = SetImaxData {  
         dev: handle.clone(),
     };
 
     let set_imax = AfbVerb::new("imax")
-        .set_callback(Box::new(ctx))
+        .set_callback(set_imax_callback)
+        .set_context(ctx)
         .set_info("set_pwm")
         .set_usage("imax")
         .finalize()?;
 
-    let ctx = SetSlacCtrl {
+      let ctx = SetSlacData {
         dev: handle.clone(),
     };
     let slac_status = AfbVerb::new("slac")
-        .set_callback(Box::new(ctx))
+        .set_callback(setslac_callback)
+        .set_context(ctx)
         .set_info("set slac status")
         .set_usage("SlacStatus Enum")
      //   .set_sample("{'UNMATCHED'}")?
      //   .set_sample("{'MATCHED'}")?
         .finalize()?;
 
-    let ctx = PowerCtrl {
+      let ctx= PowerData {
         dev: handle.clone(),
         enable: mk_power(true)?,
         disable: mk_power(false)?,
     };
     let allow_power = AfbVerb::new("power")
-        .set_callback(Box::new(ctx))
+        .set_callback(power_callback)
+        .set_context(ctx)
         .set_info("allow power (true/false)")
         .set_usage("true/false")
         .finalize()?;
