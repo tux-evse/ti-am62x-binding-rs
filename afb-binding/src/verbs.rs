@@ -36,11 +36,7 @@ struct DevTimerCtx {
     heartbeat: Vec<u8>,
 }
 
-fn timer_callback(
-    _timer: &AfbTimer, 
-    _decount: u32, 
-    ctx: &AfbCtxData
-) -> Result<(), AfbError> {
+fn timer_callback(_timer: &AfbTimer, _decount: u32, ctx: &AfbCtxData) -> Result<(), AfbError> {
     let ctx = ctx.get_ref::<DevTimerCtx>()?;
     // send heartbeat message
     ctx.dev.write(&ctx.heartbeat)
@@ -51,9 +47,14 @@ fn process_iec6185(
     iec: &Iec61851Event,
     ctx: &mut DevAsyncCtx,
 ) -> Result<(), AfbError> {
+    let action_on = JsoncObj::new();
+    action_on.add("action", "on").unwrap();
+    let action_off = JsoncObj::new();
+    action_off.add("action", "off").unwrap();
+
     let iec_msg = match iec {
         Iec61851Event::CarPluggedIn => {
-            AfbSubCall::call_sync(apiv4, ctx.lock_api, ctx.lock_verb, "{'action':'on'}")?;
+            AfbSubCall::call_sync(apiv4, ctx.lock_api, ctx.lock_verb, action_on)?;
             Iec6185Msg::Plugged(true)
         }
 
@@ -61,13 +62,13 @@ fn process_iec6185(
             let msg = mk_pwm(&PwmState::Off, 0.0)?;
             ctx.dev.write(&msg)?;
             // Fulup TBD for test only unlock motor as soon as IEC-UNLOCK is received
-            AfbSubCall::call_sync(apiv4, ctx.lock_api, ctx.lock_verb, "{'action':'off'}")?;
+            AfbSubCall::call_sync(apiv4, ctx.lock_api, ctx.lock_verb, action_off)?;
             Iec6185Msg::Plugged(false)
         }
 
         Iec61851Event::CarRequestedPower => {
             // send request to charging manager authorization
-            AfbSubCall::call_sync(apiv4, ctx.lock_api, ctx.lock_verb, "{'action':'on'}")?;
+            AfbSubCall::call_sync(apiv4, ctx.lock_api, ctx.lock_verb, action_on)?;
             Iec6185Msg::PowerRqt(true)
         }
 
@@ -75,7 +76,7 @@ fn process_iec6185(
             // set max power 0
             // M4 firmware cut power
             ctx.imax = 0;
-            AfbSubCall::call_sync(apiv4, ctx.lock_api, ctx.lock_verb, "{'action':'off'}")?;
+            AfbSubCall::call_sync(apiv4, ctx.lock_api, ctx.lock_verb, action_off)?;
             Iec6185Msg::PowerRqt(false)
         }
 
@@ -88,7 +89,7 @@ fn process_iec6185(
         // relay close vehicle charging
         Iec61851Event::PowerOff => {
             // unlock motor
-            AfbSubCall::call_sync(apiv4, ctx.lock_api, ctx.lock_verb, "{'action':'off'}")?;
+            AfbSubCall::call_sync(apiv4, ctx.lock_api, ctx.lock_verb, action_off)?;
             Iec6185Msg::RelayOn(false)
         }
 
@@ -346,7 +347,7 @@ pub(crate) fn register(
     let handle = Rc::new(ti_dev);
 
     // force power off
-    let msg= mk_disable()?;
+    let msg = mk_disable()?;
     handle.write(&msg)?;
 
     // force PWM off
@@ -374,20 +375,20 @@ pub(crate) fn register(
 
     // set heartbeat timer
     if config.tic > 0 {
-    AfbTimer::new(config.uid)
-        .set_period(config.tic)
-        .set_decount(0)
-        .set_callback(timer_callback)
-        .set_context(DevTimerCtx {
-            heartbeat: mk_heartbeat()?,
-            dev: handle.clone(),
-        })
-        .start()?;
+        AfbTimer::new(config.uid)
+            .set_period(config.tic)
+            .set_decount(0)
+            .set_callback(timer_callback)
+            .set_context(DevTimerCtx {
+                heartbeat: mk_heartbeat()?,
+                dev: handle.clone(),
+            })
+            .start()?;
     }
 
     let subscribe = AfbVerb::new("subscribe")
         .set_callback(subscribe_callback)
-        .set_context(SubscribeData{ evt: event })
+        .set_context(SubscribeData { evt: event })
         .set_info("subscribe Iec6185 event")
         .set_usage("true|false")
         .finalize()?;
@@ -405,7 +406,7 @@ pub(crate) fn register(
         .set_usage("true|false")
         .finalize()?;
 
-      let ctx = SetPwmData {
+    let ctx = SetPwmData {
         dev: handle.clone(),
     };
 
@@ -418,7 +419,7 @@ pub(crate) fn register(
         .add_sample("{'action':'on', 'duty':0.05}")?
         .finalize()?;
 
-      let ctx = SetImaxData {  
+    let ctx = SetImaxData {
         dev: handle.clone(),
     };
 
@@ -429,7 +430,7 @@ pub(crate) fn register(
         .set_usage("imax")
         .finalize()?;
 
-      let ctx = SetSlacData {
+    let ctx = SetSlacData {
         dev: handle.clone(),
     };
     let slac_status = AfbVerb::new("slac")
@@ -437,11 +438,11 @@ pub(crate) fn register(
         .set_context(ctx)
         .set_info("set slac status")
         .set_usage("SlacStatus Enum")
-     //   .set_sample("{'UNMATCHED'}")?
-     //   .set_sample("{'MATCHED'}")?
+        //   .set_sample("{'UNMATCHED'}")?
+        //   .set_sample("{'MATCHED'}")?
         .finalize()?;
 
-      let ctx= PowerData {
+    let ctx = PowerData {
         dev: handle.clone(),
         enable: mk_power(true)?,
         disable: mk_power(false)?,
