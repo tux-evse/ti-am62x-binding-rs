@@ -100,7 +100,7 @@ pub fn binding_init(rootv4: AfbApiV4, jconf: JsoncObj) -> Result<&'static AfbApi
     register(rootv4, api, &config)?;
 
     // finalize api
-    api.require_api(lock_api);
+    //api.require_api(lock_api);
     let api= api.finalize()?;
 
     Ok(api)
