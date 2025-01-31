@@ -72,7 +72,7 @@ pub fn mk_power(allow: bool) -> Result<Vec<u8>, AfbError> {
 }
 
 pub fn mk_heartbeat() -> Result<Vec<u8>, AfbError> {
-    let msg = pbuf::HighToLow {
+    /* let msg = pbuf::HighToLow {
         message: Some(pbuf::high_to_low::Message::Heartbeat(pbuf::CpuHeartbeat {})),
     };
     let mut buffer = Vec::with_capacity(msg.encoded_len());
@@ -82,7 +82,10 @@ pub fn mk_heartbeat() -> Result<Vec<u8>, AfbError> {
             "encoding-heartbeat-fail",
             "{}", error
         ),
-    }
+    } */
+
+    let mut buffer = b"123456789".to_vec();  // Convert byte string to Vec<u8>
+    Ok(buffer);
 }
 
 // for test only
