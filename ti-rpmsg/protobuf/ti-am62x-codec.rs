@@ -85,7 +85,7 @@ pub fn mk_heartbeat() -> Result<Vec<u8>, AfbError> {
     } */
 
     let mut buffer = b"123456789".to_vec();  // Convert byte string to Vec<u8>
-    Ok(buffer);
+    Ok(buffer)
 }
 
 // for test only
